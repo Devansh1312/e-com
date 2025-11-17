@@ -1,0 +1,149 @@
+{% load static %}
+{% load sass_tags %}
+{% load permission_tags %} 
+<style>
+	.simplebar-content{
+		padding: 0px !important;
+	}
+</style>
+<div class="sidebar-wrapper" sidebar-layout="stroke-svg">
+	<div>
+		<div class="logo-wrapper">
+			{% if request.user.role.id == 1 or request.user.role.id == 2 %}
+				<a href="{% url 'view_dashboard' %}">
+			{% else %}
+				<a href="{% url 'Attendance_Taker_Dashboard' %}">
+			{% endif %}
+
+				<img style="outline: none !important; width: 50px; height: auto; display: flex; margin-left: 60px; border: none !important;" class="img-fluid for-light" src="{{ website_logo }}" alt="">
+			
+			</a>
+			<div class="back-btn">
+				<i class="fa fa-angle-left"></i>
+			</div>
+			<div class="toggle-sidebar">
+				<i class="status_toggle middle sidebar-toggle" data-feather="grid"></i>
+			</div>
+		</div>
+		<div class="logo-icon-wrapper">
+			<a href="{% url 'view_dashboard' %}">
+				<img class="img-fluid" src="{{ fav_icon }}" style="width: 35px; height: 35px; border: none !important; outline: none !important;" alt="">
+			</a>
+		</div>
+		<nav class="sidebar-main">
+			<div class="left-arrow" id="left-arrow">
+				<i data-feather="arrow-left"></i>
+			</div>
+			<div id="sidebar-menu">
+				<ul class="sidebar-links" id="simple-bar">
+					<li class="back-btn">
+						<a href="#">
+							<img class="img-fluid" src="{{fav_icon }}" style="width: 35px; height: 35px; border: none !important; outline: none !important;" alt="">
+						</a>
+						<div class="mobile-back text-end">
+							<span>Back</span>
+							<i class="fa fa-angle-right ps-2" aria-hidden="true"></i>
+						</div>
+					</li>
+					{% if request.user|has_permission:'view_dashboard' %}
+						<li class="sidebar">
+							<a class="sidebar-link sidebar-title link-nav" href="{% url 'view_dashboard' %}">
+								<svg class="stroke-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-home"></use>
+								</svg>
+								<span class="lan">Dashboard</span>
+							</a>
+						</li>
+					{% endif %}
+					{% if request.user|has_permission:'Attendance_Taker_Dashboard' and request.user.role.id == 4 %}
+						<li class="sidebar">
+							<a class="sidebar-link sidebar-title link-nav" href="{% url 'Attendance_Taker_Dashboard' %}">
+								<svg class="stroke-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-home"></use>
+								</svg>
+								<span class="lan">Dashboard</span>
+							</a>
+						</li>
+					{% endif %}
+					<!-- User Menu -->
+					<li class="sidebar-list">
+						<a class="sidebar-link sidebar-title" href="#">
+							<svg class="stroke-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#user-visitor"></use>
+							</svg>
+							<svg class="fill-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#user-visitor"></use>
+							</svg>
+							<span class="lan">User</span>
+						</a>
+						<ul class="sidebar-submenu">
+							{% if request.user|has_permission:'sub_admin_list' %}
+							<li>
+								<a href="{% url 'sub_admin_list' %}">{{ user_role2 }}</a>
+							</li>
+							{% endif %}
+							{% if request.user|has_permission:'club_member_list' %}
+							<li>
+								<a href="{% url 'club_member_list' %}">{{ user_role3 }}</a>
+							</li>
+							{% endif %}
+						</ul>
+					</li>
+					
+					<!-- For General Settings -->
+					<li class="sidebar-list">
+						<a class="sidebar-link sidebar-title" href="#">
+							<svg class="stroke-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-widget"></use>
+							</svg>
+							<svg class="fill-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#fill-widget"></use>
+							</svg>
+							<span class="lan">General Settings</span>
+						</a>
+						<ul class="sidebar-submenu">
+							{% if request.user|has_permission:'country_list' %}
+							<li>
+								<a href="{% url 'country_list' %}">Country</a>
+							</li>
+							{% endif %}
+							{% if request.user|has_permission:'state_list' %}
+							<li>
+								<a href="{% url 'state_list' %}">State</a>
+							</li>
+							{% endif %}
+							{% if request.user|has_permission:'city_list' %}
+							<li>
+								<a href="{% url 'city_list' %}">City</a>
+							</li>
+							{% endif %}
+						</ul>
+					</li>
+
+						<li class="sidebar">
+							<a class="sidebar-link sidebar-title link-nav" href="{% url 'System_Settings' %}">
+								<svg class="stroke-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-learning"></use>
+								</svg>
+								<svg class="fill-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#fill-learning"></use>
+								</svg>
+								<span class="lan">System Settings</span>
+							</a>
+						</li>
+					
+					<li class="sidebar">
+							<a href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+								<i data-feather="log-in"></i>
+								<span>Log-out</span>
+							</a>
+						</li>
+				</ul>
+			</div>
+			<div class="right-arrow" id="right-arrow">
+				<i data-feather="arrow-right"></i>
+			</div>
+		</nav>
+	</div>
+</div>
+<!-- Page Sidebar Ends-->

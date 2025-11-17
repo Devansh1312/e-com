@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Add custom CSS if needed here -->
+{% endblock %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+{% include "components/loader.html" %}
+
+<style>
+    :root {
+        --primary-color: #E44044;  /* Red from your logo */
+        --secondary-color: #FAA938; /* Orange from your logo */
+        --accent-color: #2C80B4;   /* Blue from your logo */
+        --success-color: #28a745;  /* Green for success */
+        --warning-color: #ffc107;  /* Yellow for warning */
+        --danger-color: #dc3545;   /* Red for danger */
+        --dark-color: #333333;     /* Dark text color */
+        --light-color: #f8fafc;    /* Light background */
+    }
+    
+    /* Common styles */
+    .page-body {
+        padding-top: 30px;
+    }
+    
+    .img-fluid {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* Dashboard layout and responsiveness */
+    @media (max-width: 768px) {
+        .custom-margin {
+            margin-top: 100px !important;
+        }
+        .chart-container {
+            height: 300px !important;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .custom-margin {
+            margin-top: 0 !important;
+        }
+        .chart-container {
+            height: 350px;
+        }
+    }
+    
+    .h4 {
+        text-align: left !important;
+    }
+    
+    /* Stats cards styling - using your logo colors */
+    .stats-card {
+        background-color: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        min-height: 120px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+    }
+
+    .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+
+    /* First row - red (cards 1-4) */
+    .row.g-3 > div:nth-child(1) .stats-card,
+    .row.g-3 > div:nth-child(2) .stats-card,
+    .row.g-3 > div:nth-child(3) .stats-card,
+    .row.g-3 > div:nth-child(4) .stats-card {
+        border-left-color: var(--primary-color);
+    }
+
+    /* Second row - orange (cards 5-8) */
+    .row.g-3 > div:nth-child(5) .stats-card,
+    .row.g-3 > div:nth-child(6) .stats-card,
+    .row.g-3 > div:nth-child(7) .stats-card,
+    .row.g-3 > div:nth-child(8) .stats-card {
+        border-left-color: var(--secondary-color);
+    }
+
+    /* Third row - blue (cards 9-12) */
+    .row.g-3 > div:nth-child(9) .stats-card,
+    .row.g-3 > div:nth-child(10) .stats-card,
+    .row.g-3 > div:nth-child(11) .stats-card,
+    .row.g-3 > div:nth-child(12) .stats-card {
+        border-left-color: var(--accent-color);
+    }
+
+    /* Fourth row - red again (cards 13-16) */
+    .row.g-3 > div:nth-child(13) .stats-card,
+    .row.g-3 > div:nth-child(14) .stats-card,
+    .row.g-3 > div:nth-child(15) .stats-card,
+    .row.g-3 > div:nth-child(16) .stats-card {
+        border-left-color: var(--primary-color);
+    }
+    
+    .stats-icon {
+        width: 60px;
+        height: 60px;
+        background-color: white;
+        border: 1px solid #f0f0f0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .stats-icon img {
+        width: 60%;
+        height: auto;
+    }
+    
+    .stats-content {
+        flex: 1;
+        padding-right: 1rem;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.2rem;
+    }
+    
+    .stats-label {
+        font-size: 1rem;
+        color: #44566f;
+        font-weight: 500;
+    }
+    
+    @media (max-width: 767px) {
+        .stats-card {
+            min-height: 100px;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 1rem;
+        }
+        
+        .stats-number {
+            font-size: 1.25rem;
+        }
+        
+        .stats-label {
+            font-size: 0.875rem;
+        }
+    }
+    
+    /* For very small screens */
+    @media (max-width: 400px) {
+        .stats-card {
+            min-height: 80px;
+        }
+        
+        .stats-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 0.75rem;
+        }
+        
+        .stats-number {
+            font-size: 1.1rem;
+        }
+        
+        .stats-label {
+            font-size: 0.8rem;
+        }
+    }
+    
+    /* Chart and widget styles */
+    .chart-container {
+        position: relative;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    .chart-stats {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background-color: #f8f9fa;
+    }
+    
+    .badge-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    /* Animation utilities */
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+
+<div class="page-body">
+    <div class="container-fluid custom-margin mt-5">
+        <div class="page-title">
+        </div>
+        
+        <!-- User Statistics -->
+        <div class="row g-3">
+            <div class="col-6 col-sm-6 col-md-3">
+                <a href="{% url 'club_member_list' %}">
+                    <div class="stats-card animate__animated animate__fadeIn" data-delay="100">
+                        <div class="stats-icon">
+                            <img src="{% static 'assets/images/dashboard/club-members.png' %}" alt="Club Members">
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-number">{{ total_club_members }}</div>
+                            <div class="stats-label">Club Members</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Sub-Admins -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <a href="{% url 'sub_admin_list' %}">
+                    <div class="stats-card animate__animated animate__fadeIn" data-delay="200">
+                        <div class="stats-icon">
+                            <img src="{% static 'assets/images/dashboard/sub-admins.png' %}" alt="Sub-Admins">
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-number">{{ total_sub_admins }}</div>
+                            <div class="stats-label">Sub-Admins</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h4 class="mb-4">Club Management Analytics</h4>
+                <div class="row g-4">
+                
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scriptcontent %}
+<!-- Add script content if needed -->
+{% endblock %}
+
+{% block script %}
+<!-- Chart.js for dashboard charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Color palette based on your club theme
+        const colors = {
+            primary: '#E44044',    // Red
+            secondary: '#FAA938',  // Orange  
+            accent: '#2C80B4',     // Blue
+            success: '#28a745',    // Green
+            warning: '#ffc107',    // Yellow
+            danger: '#dc3545'      // Red
+        };
+
+        // User Distribution Doughnut Chart
+        const userDistCtx = document.getElementById('userDistributionChart').getContext('2d');
+        const userDistributionChart = new Chart(userDistCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Club Members', 'Sub-Admins', 'Ticket Scanners'],
+                datasets: [{
+                    data: [
+                        {{ total_club_members|default:"0" }}, 
+                        {{ total_sub_admins|default:"0" }}, 
+                        {{ total_attendance_takers|default:"0" }}
+                    ],
+                    backgroundColor: [colors.primary, colors.secondary, colors.accent],
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Event Booking Status Pie Chart
+        const eventBookingCtx = document.getElementById('eventBookingChart').getContext('2d');
+        const eventBookingChart = new Chart(eventBookingCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Successful Bookings', 'Pending Bookings', 'Failed Bookings'],
+                datasets: [{
+                    data: [
+                        {{ successful_bookings|default:"0" }}, 
+                        {{ pending_bookings|default:"0" }}, 
+                        {{ failed_bookings|default:"0" }}
+                    ],
+                    backgroundColor: [colors.success, colors.warning, colors.danger],
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Request Status Overview Chart
+        const requestStatusCtx = document.getElementById('requestStatusChart').getContext('2d');
+
+        const requestStatusChart = new Chart(requestStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'Pending', 'Approved', 'Rejected',
+                ],
+                datasets: [{
+                    data: [
+                        {{ affiliate_requests_pending|default:"0" }},
+                        {{ affiliate_requests_approved|default:"0" }},
+                        {{ affiliate_requests_rejected|default:"0" }},
+                    ],
+                    backgroundColor: [
+                        colors.warning,    // Affiliate Pending
+                        colors.success,    // Affiliate Approved  
+                        colors.danger,     // Affiliate Rejected
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Monthly Revenue Line Chart
+        // Monthly Revenue Line Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const monthlyLabels = {{ monthly_labels|safe|default:"[]" }};
+        const monthlyEventRevenue = {{ monthly_event_revenue|safe|default:"[]" }};
+        const monthlyMaintenanceRevenue = {{ monthly_maintenance_revenue|safe|default:"[]" }};
+
+        const revenueChart = new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [
+                    {
+                        label: 'Event Bookings (₹)',
+                        data: monthlyEventRevenue,
+                        borderColor: colors.primary, // Red
+                        backgroundColor: 'rgba(228, 64, 68, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: colors.primary,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    },
+                    {
+                        label: 'Maintenance (₹)',
+                        data: monthlyMaintenanceRevenue,
+                        borderColor: colors.accent, // Blue
+                        backgroundColor: 'rgba(44, 128, 180, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: colors.accent,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ₹' + context.raw.toLocaleString();
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString();
+                            },
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Resize function for charts
+        function resizeCharts() {
+            if (typeof userDistributionChart !== 'undefined') userDistributionChart.resize();
+            if (typeof eventBookingChart !== 'undefined') eventBookingChart.resize();
+            if (typeof requestStatusChart !== 'undefined') requestStatusChart.resize();
+            if (typeof revenueChart !== 'undefined') revenueChart.resize();
+        }
+        
+        window.addEventListener('resize', function() {
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(resizeCharts, 200);
+        });
+    });
+</script>
+{% endblock %}

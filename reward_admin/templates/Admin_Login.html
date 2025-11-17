@@ -1,0 +1,110 @@
+{% extends 'base-other-page.html' %} 
+{% load static %} 
+{% load sass_tags %} 
+{% load widget_tweaks %} 
+{% block title %}Presidency Club{% endblock %} 
+{% block content %} 
+<div class="row m-0">
+	<div class="col-12 p-0">
+		<div class="login-card">
+			<div>
+				<div>
+					<a class="logo" href="{% url 'adminlogin' %}">
+						<img class="img-fluid for-light" style="width: 200px; height: 150px;" src="{{ website_logo }}" alt="loginpage">
+						<img class="img-fluid for-dark" src="{{ website_logo }}" alt="loginpage">
+					</a>
+				</div>
+				<div class="login-main">
+					<form class="theme-form" method='post' novalidate> 
+            {% csrf_token %} 
+            <h4>Sign in to account</h4>
+						<p>Enter your phone & password to login</p>
+						<div class="form-group">
+							<label class="col-form-label">Phone/Email/Username</label>
+							<input type="text" name="phone" id="phone" class="form-control" placeholder="Phone/Email/Username" value="{{ phone_value }}">
+              {% if messages %} 
+                {% for message in messages %} 
+                  {% if 'phone' in message.tags %} 
+                    <div class="text-danger">{{ message }}</div> 
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+						</div>  
+						<div class="form-group">
+							<label class="col-form-label">Password</label>
+							<div class="form-input position-relative">
+								<input type="password" name="password" class="form-control" placeholder="Password" value="{{ password_value }}">
+								<div class="password-toggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+									<i class="fa fa-eye"></i>
+								</div>
+							</div>
+              {% if messages %}
+                {% for message in messages %}
+                  {% if 'password' in message.tags %} 
+                    <div class="text-danger">{{ message }}</div> 
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+						</div>
+						<div class="form-group mb-0">
+							<div class="checkbox p-0">
+								<input id="rememberMe" type="checkbox" name="rememberMe" {{ remember_me_checked }}>
+								<label class="text-muted" for="rememberMe">Remember password</label>
+							</div>
+							<div class="text-end mt-3">
+								<button class="btn btn-primary btn-block w-100" type="submit">Login</button>
+							</div>
+						</div>
+						<div class="text-center mt-3">
+							<a href="{% url 'Forgot_Password_Admin' %}" class="text-muted">Forgot Password?</a>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div> 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+	function saveDetails() {
+		var phone = document.getElementById('phone').value;
+		var saveDetailsCheckbox = document.getElementById('rememberMe');
+		if (saveDetailsCheckbox.checked) {
+			localStorage.setItem('savedPhone', phone);
+			localStorage.setItem('saveDetailsChecked', 'true');
+		} else {
+			localStorage.removeItem('savedPhone');
+			localStorage.removeItem('saveDetailsChecked');
+		}
+	}
+
+	function loadSavedDetails() {
+		var savedPhone = localStorage.getItem('savedPhone');
+		var saveDetailsChecked = localStorage.getItem('saveDetailsChecked');
+		if (savedPhone) {
+			document.getElementById('phone').value = savedPhone;
+		}
+		if (saveDetailsChecked === 'true') {
+			document.getElementById('rememberMe').checked = true;
+		}
+	}
+	$(document).ready(function() {
+		// Load saved details
+		loadSavedDetails();
+		// Remember me checkbox handler
+		$('#rememberMe').change(saveDetails);
+		// Password show/hide toggle
+		$('.password-toggle').click(function() {
+			const passwordField = $(this).siblings('input');
+			const icon = $(this).find('i');
+			if (passwordField.attr('type') === 'password') {
+				passwordField.attr('type', 'text');
+				icon.removeClass('fa-eye').addClass('fa-eye-slash');
+			} else {
+				passwordField.attr('type', 'password');
+				icon.removeClass('fa-eye-slash').addClass('fa-eye');
+			}
+		});
+	});
+</script>
+{% endblock %}

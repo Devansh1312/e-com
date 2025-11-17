@@ -1,0 +1,349 @@
+{% extends 'base.html' %} 
+{% load custom_filters %} 
+{% load static %} 
+{% load sass_tags %} 
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends--> 
+{% endblock %} 
+
+<style>
+    .is-invalid {
+        border-color: #dc3545;
+        background-color: #f8d7da;
+    }
+</style> 
+
+{% block title %}FAQ Management{% endblock %} 
+
+{% block content %} 
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addFAQModal">Add FAQ</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- FAQ List -->
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Question</th>
+                                        <th>Answer</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody> 
+                                    {% for faq in faqs %} 
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ faq.question|truncatechars:50 }}</td>
+                                        <td>{{ faq.answer|truncatechars:50 }}</td>
+                                        <td>{{ faq.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu" onclick="toggleMenu(this)">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="
+                                                    display: none;
+                                                    position: absolute;
+                                                    top: 100%;
+                                                    right: 0;
+                                                    background: #fff;
+                                                    border: 1px solid #ccc;
+                                                    border-radius: 4px;
+                                                    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                                                    z-index: 10;
+                                                    width: auto;
+                                                ">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#viewFAQModal" 
+                                                            data-faq-id="{{ faq.id }}" 
+                                                            data-faq-question="{{ faq.question }}" 
+                                                            data-faq-answer="{{ faq.answer }}"
+                                                            class="view-faq-btn"> View </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editFAQModal" 
+                                                            data-faq-id="{{ faq.id }}" 
+                                                            data-faq-question="{{ faq.question }}" 
+                                                            data-faq-answer="{{ faq.answer }}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteFAQModal" data-faq-id="{{ faq.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr> 
+                                    {% endfor %} 
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Add FAQ Modal -->
+        <div class="modal fade" id="addFAQModal" tabindex="-1" aria-labelledby="addFAQModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addFAQModalLabel">Add FAQ</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'faq_create' %}" id="addFAQForm" enctype="multipart/form-data"> 
+                            {% csrf_token %} 
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label for="question" class="form-label">Question</label>
+                                    <textarea class="form-control" id="question" name="question" rows="3" placeholder="Enter question"></textarea>
+                                    <div class="invalid-feedback" id="question-error"></div>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="answer" class="form-label">Answer</label>
+                                    <textarea class="form-control" id="answer" name="answer" rows="5" placeholder="Enter answer"></textarea>
+                                    <div class="invalid-feedback" id="answer-error"></div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-sm">Add FAQ</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- Edit FAQ Modal -->
+        <div class="modal fade" id="editFAQModal" tabindex="-1" aria-labelledby="editFAQModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editFAQModalLabel">Edit FAQ</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editFAQForm" enctype="multipart/form-data"> 
+                            {% csrf_token %} 
+                            <div class="row">
+                                <input type="hidden" id="faqId" name="id" />
+                                <div class="col-12 mb-3">
+                                    <label for="question" class="form-label">Question</label>
+                                    <textarea class="form-control" id="question" name="question" rows="3" placeholder="Enter question"></textarea>
+                                    <div class="invalid-feedback" id="question-error"></div>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="answer" class="form-label">Answer</label>
+                                    <textarea class="form-control" id="answer" name="answer" rows="5" placeholder="Enter answer"></textarea>
+                                    <div class="invalid-feedback" id="answer-error"></div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-sm">Update FAQ</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+</div>
+<!-- Delete FAQ Modal -->
+<div class="modal fade" id="deleteFAQModal" tabindex="-1" aria-labelledby="deleteFAQModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteFAQModalLabel">Delete FAQ</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form method="post" action="" id="deleteFAQForm">
+            {% csrf_token %}
+            <input type="hidden" id="faq_id" name="id">
+            <p>Are you sure you want to delete this FAQ?</p>
+            <button type="submit" class="btn btn-danger">Delete FAQ</button>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+<!-- View FAQ Modal -->
+<div class="modal fade" id="viewFAQModal" tabindex="-1" aria-labelledby="viewFAQModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewFAQModalLabel">View FAQ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6 class="form-label">Question</h6>
+                        <div class="p-3 border rounded" id="view-question"></div>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <h6 class="form-label">Answer</h6>
+                        <div class="p-3 border rounded" id="view-answer"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+  
+{% endblock %} 
+
+{% block script %} 
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script src="{% static 'assets/js/tooltip-init.js'%}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Edit FAQ Modal
+        var editFAQModal = document.getElementById("editFAQModal");
+        if (editFAQModal) {
+            editFAQModal.addEventListener("show.bs.modal", function(event) {
+                var button = event.relatedTarget;
+                var faqId = button.getAttribute("data-faq-id");
+                var question = button.getAttribute("data-faq-question");
+                var answer = button.getAttribute("data-faq-answer");
+
+                var form = document.getElementById("editFAQForm");
+                form.action = "{% url 'faq_edit' 0 %}".replace("0", faqId);
+                form.querySelector("#faqId").value = faqId;
+                form.querySelector("#question").value = question || "";
+                form.querySelector("#answer").value = answer || "";
+            });
+        }
+
+        // Toggle the visibility of the action card
+        document.querySelectorAll(".three-dots-menu").forEach(function(menu) {
+            menu.addEventListener("click", function(event) {
+                event.preventDefault();
+                var actionCard = menu.nextElementSibling;
+                actionCard.style.display = actionCard.style.display === "none" || actionCard.style.display === "" ? "block" : "none";
+                // Close other open action cards
+                document.querySelectorAll(".action-card").forEach(function(card) {
+                    if (card !== actionCard) {
+                        card.style.display = "none";
+                    }
+                });
+            });
+        });
+
+        // Delete FAQ Modal
+        var deleteFAQModal = document.getElementById('deleteFAQModal');
+        if (deleteFAQModal) {
+            deleteFAQModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget;
+                var faqID = button.getAttribute('data-faq-id');
+                var deleteForm = document.getElementById('deleteFAQForm');
+                deleteForm.action = "{% url 'faq_delete' 0 %}".replace('0', faqID);
+            });
+        }
+
+        // View FAQ Modal
+        var viewFAQModal = document.getElementById("viewFAQModal");
+        if (viewFAQModal) {
+            viewFAQModal.addEventListener("show.bs.modal", function(event) {
+                var button = event.relatedTarget;
+                var question = button.getAttribute("data-faq-question");
+                var answer = button.getAttribute("data-faq-answer");
+                var faqId = button.getAttribute("data-faq-id");
+
+                document.getElementById("view-question").textContent = question || "";
+                document.getElementById("view-answer").textContent = answer || "";
+                
+                // You might want to fetch the created_at date via AJAX if not included in the data attributes
+                // For now, we'll just show the ID
+                document.getElementById("view-created-at").textContent = "ID: " + faqId;
+            });
+        }
+    });
+
+    $(document).ready(function () {
+        function validateForm(form) {
+            let isValid = true;
+
+            // Check each input field in the form
+            $(form).find('textarea, input[type="text"]').each(function () {
+                const $input = $(this);
+                const errorId = $input.attr('id') + '-error';
+                const $errorElement = $('#' + errorId);
+
+                if ($input.val().trim() === '') {
+                    $input.addClass('is-invalid');
+                    $errorElement.text('This field is required.').css('color', 'red');
+                    isValid = false;
+                } else {
+                    $input.removeClass('is-invalid');
+                    $errorElement.text('');
+                }
+            });
+
+            return isValid;
+        }
+
+        // Add form validation on submit
+        $('#addFAQForm').on('submit', function (event) {
+            event.preventDefault();
+            if (!validateForm(this)) {
+                console.log('Add FAQ form validation failed');
+                return;
+            }
+            this.submit();
+        });
+
+        // Edit form validation on submit
+        $('#editFAQForm').on('submit', function (event) {
+            event.preventDefault();
+            if (!validateForm(this)) {
+                console.log('Edit FAQ form validation failed');
+                return;
+            }
+            this.submit();
+        });
+
+        // Reset invalid class and error message on input change
+        $('#addFAQForm, #editFAQForm').find('textarea, input[type="text"]').on('input', function () {
+            $(this).removeClass('is-invalid');
+            $('#' + $(this).attr('id') + '-error').text('');
+        });
+    });
+
+    // Hide action card if clicking outside
+    document.addEventListener("click", function(event) {
+        var isClickInside = event.target.closest(".action-menu-container");
+        if (!isClickInside) {
+            document.querySelectorAll(".action-card").forEach(function(card) {
+                card.style.display = "none";
+            });
+        }
+    });
+</script> 
+{% endblock %}

@@ -1,0 +1,921 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends-->
+<style>
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    .invalid-feedback {
+        display: block;
+        color: #dc3545;
+    }
+    
+    /* Password toggle styling for input-group structure */
+    .password-toggle {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .password-toggle:hover {
+        background-color: #e9ecef;
+    }
+    
+    .input-group-text {
+        border-left: none;
+    }
+    
+    .input-group .form-control:focus {
+        z-index: 3;
+    }
+    
+    /* Loading button styles */
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+    
+    .btn-loading .btn-text {
+        visibility: hidden;
+    }
+    
+    .btn-loading::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: btn-loading-spinner 1s ease infinite;
+    }
+    
+    @keyframes btn-loading-spinner {
+        from {
+            transform: rotate(0turn);
+        }
+        to {
+            transform: rotate(1turn);
+        }
+    }
+    
+    /* Disable form elements when loading */
+    .form-loading .form-control,
+    .form-loading .btn:not(.btn-primary),
+    .form-loading .input-group-text {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+    
+    /* Password strength indicator */
+    .password-strength {
+        margin-top: 5px;
+        font-size: 12px;
+    }
+    
+    .password-strength-weak {
+        color: #dc3545;
+    }
+    
+    .password-strength-medium {
+        color: #ffc107;
+    }
+    
+    .password-strength-strong {
+        color: #28a745;
+    }
+    
+    .password-requirements {
+        margin-top: 5px;
+        font-size: 11px;
+        color: #6c757d;
+    }
+    
+    .password-requirements ul {
+        margin: 0;
+        padding-left: 15px;
+    }
+    
+    .password-requirements li {
+        margin: 2px 0;
+    }
+    
+    .password-requirements .requirement-met {
+        color: #28a745;
+    }
+    
+    .password-requirements .requirement-not-met {
+        color: #dc3545;
+    }
+    
+    /* Form overlay for better loading UX */
+    .form-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .form-overlay.show {
+        display: flex;
+    }
+    
+    .form-overlay .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Character count styling */
+    .character-count {
+        font-size: 11px;
+        margin-top: 2px;
+    }
+    
+    .character-count.text-danger {
+        color: #dc3545 !important;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Edit Club Member{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h4 class="card-title mb-0">Edit Club Member</h4>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-secondary btn-sm" href="{% url 'club_member_list' %}">
+                                <i class="fa fa-arrow-left me-1"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="id" value="{{ member.id }}">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="first_name">First Name</label>
+                                        <input type="text" class="form-control {% if errors.first_name %}is-invalid{% endif %}" 
+                                               id="first_name" name="first_name" 
+                                               value="{% firstof form_data.first_name member.first_name %}" >
+                                        {% if errors.first_name %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.first_name.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="last_name">Last Name</label>
+                                        <input type="text" class="form-control {% if errors.last_name %}is-invalid{% endif %}" 
+                                               id="last_name" name="last_name" 
+                                               value="{% firstof form_data.last_name member.last_name %}" >
+                                        {% if errors.last_name %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.last_name.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="membership_id">Membership ID</label>
+                                        <input type="text" class="form-control {% if errors.membership_id %}is-invalid{% endif %}" 
+                                               id="membership_id" name="membership_id" 
+                                               value="{% firstof form_data.membership_id member.membership_id %}" >
+                                        {% if errors.membership_id %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.membership_id.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="name">Display Name</label>
+                                        <input type="text" class="form-control {% if errors.name %}is-invalid{% endif %}" 
+                                               id="name" name="name" 
+                                               value="{% firstof form_data.name member.name %}" >
+                                        {% if errors.name %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.name.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Date fields with HTML5 date input -->
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="date_of_birth">Date of Birth</label>
+                                        <input type="date" class="form-control {% if errors.date_of_birth %}is-invalid{% endif %}" 
+                                            id="date_of_birth" name="date_of_birth" 
+                                            value="{% if form_data.date_of_birth %}{{ form_data.date_of_birth }}{% elif member.date_of_birth %}{{ member.date_of_birth|date:'Y-m-d' }}{% endif %}">
+                                        {% if errors.date_of_birth %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.date_of_birth.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="enrollment_date">Date of Enrollment</label>
+                                        <input type="date" class="form-control {% if errors.enrollment_date %}is-invalid{% endif %}" 
+                                            id="enrollment_date" name="enrollment_date" 
+                                            value="{% if form_data.enrollment_date %}{{ form_data.enrollment_date }}{% elif member.enrollment_date %}{{ member.enrollment_date|date:'Y-m-d' }}{% endif %}">
+                                        {% if errors.enrollment_date %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.enrollment_date.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="anniversary_date">Anniversary Date</label>
+                                        <input type="date" class="form-control {% if errors.anniversary_date %}is-invalid{% endif %}" 
+                                            id="anniversary_date" name="anniversary_date" 
+                                            value="{% if form_data.anniversary_date %}{{ form_data.anniversary_date }}{% elif member.anniversary_date %}{{ member.anniversary_date|date:'Y-m-d' }}{% endif %}">
+                                        {% if errors.anniversary_date %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.anniversary_date.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Rest of your form remains the same -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="email">Email</label>
+                                        <input type="email" class="form-control {% if errors.email %}is-invalid{% endif %}" 
+                                               id="email" name="email" 
+                                               value="{% firstof form_data.email member.email %}" >
+                                        {% if errors.email %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.email.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="phone">Phone</label>
+                                        <input type="text" class="form-control {% if errors.phone %}is-invalid{% endif %}" 
+                                               id="phone" name="phone" 
+                                               value="{% firstof form_data.phone member.phone %}" >
+                                        {% if errors.phone %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.phone.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="gender">Gender</label>
+                                        <select class="form-control" id="gender" name="gender">
+                                            <option value="">-- Select Gender --</option>
+                                            {% for gender in genders %}
+                                                <option value="{{ gender.id }}" 
+                                                    {% if form_data.gender == gender.id|stringformat:"s" or member.gender_id == gender.id %}selected{% endif %}>
+                                                    {{ gender.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="parent_id">Parent Member</label>
+                                        <select class="form-control" id="parent_id" name="parent_id">
+                                            <option value="">-- Select Parent Member --</option>
+                                            {% for parent in parent_members %}
+                                                <option value="{{ parent.id }}" 
+                                                    {% if form_data.parent_id == parent.id|stringformat:"s" or member.parent_id == parent.id %}selected{% endif %}>
+                                                    {{ parent.membership_id }} - {{ parent.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="address">Address</label>
+                                        <textarea class="form-control {% if errors.address %}is-invalid{% endif %}" 
+                                                  id="address" name="address" rows="3">{% firstof form_data.address member.address %}</textarea>
+                                        {% if errors.address %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.address.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6" id="rewardPointsContainer">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="reward_points">Reward Points</label>
+                                        <input type="number" class="form-control {% if errors.reward_points %}is-invalid{% endif %}" 
+                                               id="reward_points" name="reward_points" min="0" 
+                                               value="{% firstof form_data.reward_points member.presidencyclub_balance %}">
+                                        {% if errors.reward_points %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.reward_points.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="password">New Password (leave blank to keep current)</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control {% if errors.password %}is-invalid{% endif %}" 
+                                                   id="password" name="password">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text password-toggle" style="cursor: pointer;">
+                                                    <i class="fa fa-eye"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% if errors.password %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.password.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label style="margin-top: 5px;" for="confirm_password">Confirm New Password</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control {% if errors.confirm_password %}is-invalid{% endif %}" 
+                                                   id="confirm_password" name="confirm_password">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text password-toggle" style="cursor: pointer;">
+                                                    <i class="fa fa-eye"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% if errors.confirm_password %}
+                                            <div class="invalid-feedback">
+                                                {{ errors.confirm_password.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group text-right mt-4">
+                                <a href="{% url 'club_member_list' %}" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary">Update Club Member</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scriptcontent %}
+<script>
+$(document).ready(function() {
+    // Password toggle functionality
+    $('.password-toggle').click(function() {
+        const input = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // Show/hide reward points based on parent selection
+    $('#parent_id').change(function() {
+        if ($(this).val()) {
+            $('#rewardPointsContainer').hide();
+        } else {
+            $('#rewardPointsContainer').show();
+        }
+    });
+
+    // Initial check for reward points container
+    if ($('#parent_id').val()) {
+        $('#rewardPointsContainer').hide();
+    }
+
+    // Function to validate the entire form and update button state
+    function validateFormAndUpdateButton() {
+        let isValid = true;
+        const submitBtn = $('button[type="submit"]');
+        
+        // Validate display name length
+        const nameField = $('#name');
+        const maxLength = 20;
+        
+        if (nameField.val().length > maxLength) {
+            isValid = false;
+        }
+        
+        // Validate required fields
+        const requiredFields = [
+            { id: 'first_name', name: 'First Name' },
+            { id: 'last_name', name: 'Last Name' },
+            { id: 'membership_id', name: 'Membership ID' },
+            { id: 'name', name: 'Display Name' },
+            { id: 'email', name: 'Email' },
+            { id: 'phone', name: 'Phone' },
+            { id: 'gender', name: 'Gender' }
+        ];
+        
+        requiredFields.forEach(function(field) {
+            const $field = $('#' + field.id);
+            const value = $field.val().trim();
+            
+            if (!value) {
+                isValid = false;
+            }
+            
+            // Additional email validation
+            if (field.id === 'email' && value) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    isValid = false;
+                }
+            }
+        });
+        
+        // Password validation if password is entered
+        const password = $('#password').val();
+        const confirmPassword = $('#confirm_password').val();
+        
+        if (password) {
+            const validation = validatePassword(password);
+            if (validation.metCount < 4) {
+                isValid = false;
+            }
+        }
+        
+        if (password || confirmPassword) {
+            if (password !== confirmPassword) {
+                isValid = false;
+            }
+        }
+        
+        // Enable/disable submit button based on validation
+        if (isValid) {
+            submitBtn.prop('disabled', false);
+            submitBtn.removeClass('btn-loading');
+        } else {
+            // Don't disable here, let the user try to submit and see the errors
+            // We'll only disable during actual submission
+        }
+        
+        return isValid;
+    }
+
+    // Display Name character limit validation
+    $('#name').on('input', function() {
+        const maxLength = 20;
+        const currentLength = $(this).val().length;
+        
+        // Remove any existing character count elements
+        $('#name-character-count').remove();
+        
+        // Create or update character count display
+        if (currentLength > 0) {
+            const countElement = $('<small class="form-text text-muted character-count" id="name-character-count"></small>');
+            
+            if (currentLength > maxLength) {
+                countElement.html(`<span class="text-danger">${currentLength}/${maxLength} characters - Exceeded limit!</span>`);
+                $(this).addClass('is-invalid');
+                
+                // Add error message if not already present
+                if (!$('#name-maxlength-error').length) {
+                    $(this).after('<div class="invalid-feedback" id="name-maxlength-error">Display name cannot exceed 20 characters</div>');
+                }
+            } else {
+                countElement.text(`${currentLength}/${maxLength} characters`);
+                $(this).removeClass('is-invalid');
+                $('#name-maxlength-error').remove();
+            }
+            
+            // Add the counter after the field
+            $(this).after(countElement);
+        } else {
+            // Clear the counter if field is empty
+            $('#name-maxlength-error').remove();
+            $(this).removeClass('is-invalid');
+        }
+        
+        // Re-validate form and update button state
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Password strength validation function
+    function validatePassword(password) {
+        const requirements = {
+            length: password.length >= 8,
+            lowercase: /[a-z]/.test(password),
+            uppercase: /[A-Z]/.test(password),
+            number: /\d/.test(password)
+        };
+
+        const metCount = Object.values(requirements).filter(Boolean).length;
+        let strength = 'weak';
+        
+        if (metCount >= 4) {
+            strength = 'strong';
+        } else if (metCount >= 3) {
+            strength = 'medium';
+        }
+
+        return { requirements, strength, metCount };
+    }
+
+    // Add password requirements display
+    function addPasswordRequirements(fieldId) {
+        const field = $('#' + fieldId);
+        if (!$('#' + fieldId + '-requirements').length) {
+            const requirementsHTML = `
+                <div class="password-requirements" id="${fieldId}-requirements">
+                    <small>Password must contain:</small>
+                    <ul>
+                        <li id="${fieldId}-req-length" class="requirement-not-met">At least 8 characters</li>
+                        <li id="${fieldId}-req-lowercase" class="requirement-not-met">One lowercase letter</li>
+                        <li id="${fieldId}-req-uppercase" class="requirement-not-met">One uppercase letter</li>
+                        <li id="${fieldId}-req-number" class="requirement-not-met">One number</li>
+                    </ul>
+                </div>
+            `;
+            field.closest('.input-group').after(requirementsHTML);
+        }
+    }
+
+    // Update password requirements display
+    function updatePasswordRequirements(fieldId, validation) {
+        const { requirements } = validation;
+        
+        $('#' + fieldId + '-req-length')
+            .removeClass('requirement-met requirement-not-met')
+            .addClass(requirements.length ? 'requirement-met' : 'requirement-not-met');
+            
+        $('#' + fieldId + '-req-lowercase')
+            .removeClass('requirement-met requirement-not-met')
+            .addClass(requirements.lowercase ? 'requirement-met' : 'requirement-not-met');
+            
+        $('#' + fieldId + '-req-uppercase')
+            .removeClass('requirement-met requirement-not-met')
+            .addClass(requirements.uppercase ? 'requirement-met' : 'requirement-not-met');
+            
+        $('#' + fieldId + '-req-number')
+            .removeClass('requirement-met requirement-not-met')
+            .addClass(requirements.number ? 'requirement-met' : 'requirement-not-met');
+    }
+
+    // Password validation on input
+    $('#password').on('input', function() {
+        const password = $(this).val();
+        
+        if (password.length > 0) {
+            const validation = validatePassword(password);
+            
+            // Add requirements display if not exists
+            addPasswordRequirements('password');
+            
+            // Update requirements display
+            updatePasswordRequirements('password', validation);
+            
+            // Remove previous validation states
+            $(this).removeClass('is-invalid');
+            $(this).closest('.form-group').find('.invalid-feedback').remove();
+            
+            // Add strength indicator
+            $('#password-strength').remove();
+            let strengthClass = 'password-strength-' + validation.strength;
+            let strengthText = validation.strength.charAt(0).toUpperCase() + validation.strength.slice(1);
+            
+            $(this).closest('.input-group').after(
+                `<div class="password-strength ${strengthClass}" id="password-strength">
+                    Password strength: ${strengthText}
+                </div>`
+            );
+        } else {
+            // Remove requirements and strength indicator if password is empty
+            $('#password-requirements').remove();
+            $('#password-strength').remove();
+        }
+        
+        // Check confirm password match if it has value
+        const confirmPassword = $('#confirm_password').val();
+        if (confirmPassword && password !== confirmPassword) {
+            $('#confirm_password').addClass('is-invalid');
+            $('#confirm_password').closest('.form-group').find('.invalid-feedback').remove();
+            $('#confirm_password').closest('.input-group').after('<div class="invalid-feedback">Passwords do not match</div>');
+        } else if (confirmPassword && password === confirmPassword) {
+            $('#confirm_password').removeClass('is-invalid');
+            $('#confirm_password').closest('.form-group').find('.invalid-feedback').remove();
+        }
+        
+        // Re-validate form and update button state
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Hide password requirements when field loses focus and password is strong
+    $('#password').on('blur', function() {
+        const password = $(this).val();
+        if (password) {
+            const validation = validatePassword(password);
+            if (validation.metCount === 4) {
+                $('#password-requirements').fadeOut();
+            }
+        }
+    });
+
+    // Show password requirements when field gets focus
+    $('#password').on('focus', function() {
+        if ($('#password-requirements').length && $(this).val().length > 0) {
+            $('#password-requirements').fadeIn();
+        }
+    });
+
+    // Confirm password validation
+    $('#confirm_password').on('input', function() {
+        const password = $('#password').val();
+        const confirmPassword = $(this).val();
+        
+        if (password && confirmPassword) {
+            // Remove existing error messages
+            $(this).closest('.form-group').find('.invalid-feedback').remove();
+            
+            if (password !== confirmPassword) {
+                $(this).addClass('is-invalid');
+                $(this).closest('.input-group').after('<div class="invalid-feedback">Passwords do not match</div>');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        }
+        
+        // Re-validate form and update button state
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Loading state functions
+    function showLoadingState(button) {
+        // Disable the button and show loading state
+        button.prop('disabled', true);
+        button.addClass('btn-loading');
+        
+        // Store original text and show loading text
+        if (!button.data('original-text')) {
+            button.data('original-text', button.html());
+        }
+        button.html('<span class="btn-text">Updating...</span>');
+    }
+
+    function hideLoadingState(button) {
+        // Re-enable the button and hide loading state
+        button.prop('disabled', false);
+        button.removeClass('btn-loading');
+        
+        // Restore original text
+        if (button.data('original-text')) {
+            button.html(button.data('original-text'));
+        }
+        
+        // Remove form loading class
+        $('form').removeClass('form-loading');
+    }
+
+    // Form validation with loading state
+    $('form').submit(function(e) {
+        e.preventDefault();
+        
+        let isValid = true;
+        const submitBtn = $(this).find('button[type="submit"]');
+        
+        // Re-enable submit button first in case it was disabled
+        submitBtn.prop('disabled', false);
+        
+        // Clear previous error states
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+        
+        // Validate display name length first
+        const nameField = $('#name');
+        const maxLength = 20;
+        
+        if (nameField.val().length > maxLength) {
+            isValid = false;
+            nameField.addClass('is-invalid');
+            nameField.after('<div class="invalid-feedback" id="name-maxlength-error">Display name cannot exceed 20 characters</div>');
+        }
+        
+        // Validate required fields
+        const requiredFields = [
+            { id: 'first_name', name: 'First Name' },
+            { id: 'last_name', name: 'Last Name' },
+            { id: 'membership_id', name: 'Membership ID' },
+            { id: 'name', name: 'Display Name' },
+            { id: 'email', name: 'Email' },
+            { id: 'phone', name: 'Phone' },
+            { id: 'gender', name: 'Gender' }
+        ];
+        
+        requiredFields.forEach(function(field) {
+            const $field = $('#' + field.id);
+            const value = $field.val().trim();
+            
+            if (!value) {
+                isValid = false;
+                $field.addClass('is-invalid');
+                $field.after('<div class="invalid-feedback">' + field.name + ' is required</div>');
+            }
+            
+            // Additional email validation
+            if (field.id === 'email' && value) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    isValid = false;
+                    $field.addClass('is-invalid');
+                    $field.next('.invalid-feedback').remove();
+                    $field.after('<div class="invalid-feedback">Please enter a valid email address</div>');
+                }
+            }
+        });
+        
+        // Enhanced password validation if password is entered
+        const password = $('#password').val();
+        const confirmPassword = $('#confirm_password').val();
+        
+        if (password) {
+            const validation = validatePassword(password);
+            if (validation.metCount < 4) {
+                isValid = false;
+                $('#password').addClass('is-invalid');
+                $('#password').closest('.form-group').find('.invalid-feedback').remove();
+                $('#password').closest('.input-group').after('<div class="invalid-feedback">Password must meet all requirements above</div>');
+            }
+        }
+        
+        if (password || confirmPassword) {
+            if (password !== confirmPassword) {
+                isValid = false;
+                $('#password, #confirm_password').addClass('is-invalid');
+                $('#confirm_password').closest('.form-group').find('.invalid-feedback').remove();
+                $('#confirm_password').closest('.input-group').after('<div class="invalid-feedback">Passwords do not match</div>');
+            }
+        }
+        
+        if (!isValid) {
+            // Scroll to the first error
+            const firstError = $('.is-invalid').first();
+            if (firstError.length) {
+                $('html, body').animate({
+                    scrollTop: firstError.offset().top - 100
+                }, 500);
+            }
+            // Don't disable the button, allow user to try again
+            return false;
+        }
+        
+        // Only disable button if form is valid and we're about to submit
+        showLoadingState(submitBtn);
+        
+        // Add form loading class
+        $(this).addClass('form-loading');
+        
+        // Submit the form after a small delay to show loading state
+        setTimeout(() => {
+            this.submit();
+        }, 100);
+    });
+
+    // Real-time validation for email format
+    $('#email').on('blur', function() {
+        const email = $(this).val().trim();
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                $(this).addClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
+                $(this).after('<div class="invalid-feedback">Please enter a valid email address</div>');
+            } else {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
+            }
+        }
+        
+        // Re-validate form and update button state
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Clear validation errors when user starts typing and re-validate
+    $('input, select, textarea').on('input', function() {
+        // Don't interfere with password field special handling
+        if (!$(this).hasClass('password-field') && $(this).attr('id') !== 'password' && $(this).attr('id') !== 'confirm_password') {
+            if ($(this).val().length > 0) {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
+            }
+        }
+        
+        // Re-validate form and update button state after a short delay
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Also validate on change events for select elements
+    $('select').on('change', function() {
+        if ($(this).val()) {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+        
+        // Re-validate form and update button state
+        setTimeout(validateFormAndUpdateButton, 100);
+    });
+
+    // Handle browser back/forward buttons to reset form state
+    $(window).on('pageshow', function(event) {
+        if (event.originalEvent.persisted) {
+            // Reset form state if page is loaded from cache
+            $('form').removeClass('form-loading');
+            $('button[type="submit"]').each(function() {
+                hideLoadingState($(this));
+            });
+        }
+    });
+
+    // Prevent form submission when clicking password toggle
+    $('.password-toggle').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    // Initial form validation on page load
+    setTimeout(validateFormAndUpdateButton, 500);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,553 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<!-- Load Select2 CSS from CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<style>
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        min-height: 38px;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #7366ff;
+        border-color: #7366ff;
+        color: white;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: white;
+    }
+    .select2-container {
+        width: 100% !important;
+    }
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+    .invalid-feedback {
+        display: none;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+        color: #dc3545;
+    }
+    .is-invalid ~ .invalid-feedback {
+        display: block;
+    }
+    .form-control:disabled {
+        background-color: #f8f9fa;
+        opacity: 0.7;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+               <div class="col-6">
+               </div>
+               <div class="col-6"></div>
+            </div>
+        </div>        
+        <div class="row mt-4">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Edit Profile</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Profile Update Form -->
+                        <form method="post" enctype="multipart/form-data" action="{% url 'edit_profile' %}" id="profileForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <!-- Basic Info -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">First Name</label>
+                                        <input type="text" class="form-control {% if errors.first_name %}is-invalid{% endif %}" 
+                                               name="first_name" value="{{ user.first_name }}">
+                                        {% if errors.first_name %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.first_name.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Last Name</label>
+                                        <input type="text" class="form-control {% if errors.last_name %}is-invalid{% endif %}" 
+                                               name="last_name" value="{{ user.last_name }}">
+                                        {% if errors.last_name %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.last_name.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Full Name</label>
+                                        <input type="text" class="form-control {% if errors.name %}is-invalid{% endif %}" 
+                                               name="name" value="{{ user.name }}">
+                                        {% if errors.name %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.name.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Gender</label>
+                                        <select class="form-control {% if errors.gender %}is-invalid{% endif %}" name="gender">
+                                            <option value="">Select Gender</option>
+                                            <option value="1" {% if user.gender.id == 1 %}selected{% endif %}>Male</option>
+                                            <option value="2" {% if user.gender.id == 2 %}selected{% endif %}>Female</option>
+                                            <option value="3" {% if user.gender.id == 3 %}selected{% endif %}>Other</option>
+                                        </select>
+                                        {% if errors.gender %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.gender.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Contact Info -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Username</label>
+                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                            {{ user.username }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Phone</label>
+                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                            {{ user.phone }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email address</label>
+                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                            {{ user.email }}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Location Info -->
+                                {% if request.user.role.id == 2 %}
+                                    <!-- Display as plain text for role 2 -->
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Country</label>
+                                            <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                                {{ user.country.name|default:"Not specified" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">State</label>
+                                            <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                                {{ user.state.name|default:"Not specified" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label class="form-label">Cities</label>
+                                            <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
+                                                {% for city in user.cities.all %}{{ city.name }}{% if not forloop.last %}, {% endif %}{% empty %}Not specified{% endfor %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <!-- Display as normal select fields for other roles -->
+                                    <!-- Country field with better error handling -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Country <span class="text-danger">*</span></label>
+                                        <select class="form-control {% if errors.country %}is-invalid{% endif %}" id="country" name="country" required>
+                                            <option value="">Select Country</option>
+                                            {% for country in countries %}
+                                                <option value="{{ country.id }}" 
+                                                    {% if user.country and user.country.id == country.id %}selected{% endif %}>
+                                                    {{ country.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if errors.country %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.country.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- State field with loading indicator -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">State <span class="text-danger">*</span></label>
+                                        <select class="form-control {% if errors.state %}is-invalid{% endif %}" id="state" name="state" required>
+                                            <option value="">Select State</option>
+                                            {% if user.state %}
+                                                <option value="{{ user.state.id }}" selected>{{ user.state.name }}</option>
+                                            {% endif %}
+                                        </select>
+                                        {% if errors.state %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.state.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Cities field with proper Select2 integration -->
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">Cities <span class="text-danger">*</span></label>
+                                        <select class="form-control select2-multiple {% if errors.cities %}is-invalid{% endif %}" 
+                                                id="cities" name="cities" multiple="multiple" required>
+                                            {% for city in cities %}
+                                                <option value="{{ city.id }}" 
+                                                    {% if city in user.cities.all %}selected{% endif %}>
+                                                    {{ city.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if errors.cities %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.cities.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Media -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Profile Picture</label><br>
+                                        {% if user.profile_picture %}
+                                            <img src="{{ user.profile_picture.url }}" alt="Profile Picture" class="img-thumbnail" style="width: 100px; height: 100px; margin-bottom: 10px;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="profile_picture-clear" id="profile_picture-clear">
+                                                <label class="form-check-label" for="profile_picture-clear">Remove current image</label>
+                                            </div>
+                                        {% endif %}
+                                        <input type="file" name="profile_picture" class="form-control {% if errors.profile_picture %}is-invalid{% endif %}">
+                                        {% if errors.profile_picture %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.profile_picture.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Cover Photo</label><br>
+                                        {% if user.card_header %}
+                                            <img src="{{ user.card_header.url }}" alt="Cover Photo" class="img-thumbnail" style="width: 100px; height: 100px; margin-bottom: 10px;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="card_header-clear" id="card_header-clear">
+                                                <label class="form-check-label" for="card_header-clear">Remove current image</label>
+                                            </div>
+                                        {% endif %}
+                                        <input type="file" name="card_header" class="form-control {% if errors.card_header %}is-invalid{% endif %}">
+                                        {% if errors.card_header %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.card_header.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer text-end">
+                                <button class="btn btn-primary" type="submit" id="submitBtn">
+                                    <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
+                                    Update Profile
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                    Change Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-success">Success</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Your profile has been updated successfully!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<!-- Load jQuery first -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!-- Load Select2 after jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<!-- Load Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Load other scripts -->
+<script src="{% static 'js/wow.min.js' %}"></script>
+
+<script>
+// Wait for all scripts to load before initializing
+$(document).ready(function() {
+    // Check if Select2 is loaded
+    function initializeSelect2() {
+        if (typeof $.fn.select2 !== 'undefined') {
+            // Initialize Select2 for cities
+            $('#cities').select2({
+                placeholder: "Select cities",
+                allowClear: true,
+                width: '100%' // Ensure proper width
+            });
+            
+            // Initialize the rest of the functionality
+            initializeLocationHandlers();
+        } else {
+            console.log('Select2 not loaded yet, retrying...');
+            setTimeout(initializeSelect2, 100);
+        }
+    }
+    
+    function initializeLocationHandlers() {
+        // Store initial values from template
+        const initialCountryId = $('#country').val();
+        const initialStateId = '{{ user.state.id|default:"" }}';
+        const initialCityIds = [{% for city in user.cities.all %}'{{ city.id }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Load states when country changes
+        function loadStates(countryId, selectedStateId = null) {
+            const stateSelect = $('#state');
+            
+            if (!countryId) {
+                stateSelect.empty().append('<option value="">Select State</option>');
+                $('#cities').empty().trigger('change');
+                return;
+            }
+            
+            // Show loading state
+            stateSelect.prop('disabled', true);
+            stateSelect.empty().append('<option value="">Loading states...</option>');
+            
+            $.ajax({
+                url: '/api-get-states/',
+                type: 'GET',
+                data: { 
+                    country_id: countryId 
+                },
+                headers: {
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                success: function(response) {
+                    stateSelect.empty();
+                    stateSelect.append('<option value="">Select State</option>');
+                    
+                    if (response && response.length > 0) {
+                        response.forEach(function(state) {
+                            const isSelected = selectedStateId && selectedStateId == state.id ? 'selected' : '';
+                            stateSelect.append(`<option value="${state.id}" ${isSelected}>${state.name}</option>`);
+                        });
+                        
+                        // If a state was selected, load its cities
+                        if (selectedStateId) {
+                            loadCities(selectedStateId, initialCityIds);
+                        }
+                    } else {
+                        stateSelect.append('<option value="">No states found</option>');
+                    }
+                    
+                    stateSelect.prop('disabled', false);
+                    
+                    // Clear cities if no state is selected
+                    if (!selectedStateId) {
+                        $('#cities').empty().trigger('change');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading states:', error);
+                    stateSelect.empty().append('<option value="">Error loading states</option>');
+                    stateSelect.prop('disabled', false);
+                }
+            });
+        }
+
+        // Load cities when state changes
+        function loadCities(stateId, selectedCityIds = []) {
+            const citySelect = $('#cities');
+            
+            if (!stateId) {
+                citySelect.empty().trigger('change');
+                return;
+            }
+            
+            // Show loading state
+            citySelect.prop('disabled', true);
+            
+            $.ajax({
+                url: '/api-get-cities/',
+                type: 'GET',
+                data: { 
+                    state_id: stateId 
+                },
+                headers: {
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                success: function(response) {
+                    citySelect.empty();
+                    
+                    if (response && response.length > 0) {
+                        response.forEach(function(city) {
+                            const isSelected = selectedCityIds.includes(city.id.toString()) ? 'selected' : '';
+                            citySelect.append(`<option value="${city.id}" ${isSelected}>${city.name}</option>`);
+                        });
+                    } else {
+                        citySelect.append('<option value="">No cities found</option>');
+                    }
+                    
+                    citySelect.prop('disabled', false);
+                    citySelect.trigger('change');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading cities:', error);
+                    citySelect.prop('disabled', false);
+                }
+            });
+        }
+
+        // Country change event
+        $('#country').on('change', function() {
+            const countryId = $(this).val();
+            loadStates(countryId);
+        });
+
+        // State change event
+        $('#state').on('change', function() {
+            const stateId = $(this).val();
+            loadCities(stateId);
+        });
+
+        // Initialize on page load
+        if (initialCountryId) {
+            loadStates(initialCountryId, initialStateId);
+        }
+
+        // Form submission with AJAX
+        $('#profileForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const submitBtn = $('#submitBtn');
+            const spinner = $('#spinner');
+            
+            // Show loading spinner
+            submitBtn.prop('disabled', true);
+            spinner.removeClass('d-none');
+            
+            // Clear previous errors
+            form.find('.is-invalid').removeClass('is-invalid');
+            form.find('.invalid-feedback').hide();
+            
+            // Create FormData object for file uploads
+            const formData = new FormData(form[0]);
+            
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#successModal').modal('show');
+                        // Reload page after modal is closed
+                        $('#successModal').on('hidden.bs.modal', function () {
+                            window.location.reload();
+                        });
+                    } else {
+                        // Display form errors
+                        if (response.errors) {
+                            for (const field in response.errors) {
+                                const input = $(`[name="${field}"]`);
+                                input.addClass('is-invalid');
+                                const errorDiv = input.siblings('.invalid-feedback');
+                                if (errorDiv.length) {
+                                    errorDiv.text(response.errors[field][0]).show();
+                                } else {
+                                    // For select2 elements
+                                    const parentDiv = input.closest('.mb-3');
+                                    parentDiv.find('.invalid-feedback').text(response.errors[field][0]).show();
+                                }
+                            }
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error:', xhr.responseText);
+                    alert('An error occurred while updating your profile.');
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false);
+                    spinner.addClass('d-none');
+                }
+            });
+        });
+    }
+    
+    // Start initialization
+    initializeSelect2();
+});
+</script>
+{% endblock %}

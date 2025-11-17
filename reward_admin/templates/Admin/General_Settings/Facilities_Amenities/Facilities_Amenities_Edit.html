@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .form-container {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-top: 20px;
+    }
+    .form-title {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        padding: 12px 15px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    }
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+    .image-preview {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 6px;
+        border: 2px dashed #ddd;
+        padding: 10px;
+        margin-top: 10px;
+        display: none;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        padding: 20px 30px;
+        border-radius: 8px 8px 0 0;
+    }
+    .btn-group {
+        gap: 10px;
+    }
+    .current-image-container {
+        margin-top: 10px;
+    }
+    .current-image {
+        max-height: 150px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    .remove-image-checkbox {
+        margin-top: 5px;
+    }
+    .preview-container {
+        margin-top: 10px;
+    }
+    .preview-image {
+        max-height: 150px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Edit Facility/Amenity{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h4 class="card-title mb-0">Edit Attendance Scanner</h4>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-secondary btn-sm" href="{% url 'facilities_amenities_list' %}">
+                                <i class="fa fa-arrow-left me-1"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{% url 'facilities_amenities_edit' facility.pk %}" id="editFacilityForm" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-12 mb-3">
+                                <label for="name" class="form-label required-field">Name</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ facility.name }}" placeholder="Enter facility/amenity name">
+                                <div class="invalid-feedback" id="name-error"></div>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label">Description (Optional)</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter description (optional)">{{ facility.description }}</textarea>
+                            </div>
+
+                            <!-- Current Image -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Current Image</label>
+                                <div class="current-image-container">
+                                    {% if facility.image %}
+                                    <img src="{{ facility.image.url }}" alt="Current Image" class="current-image">
+                                    <div class="form-check remove-image-checkbox">
+                                        <input type="checkbox" name="remove_image" id="remove_image" class="form-check-input">
+                                        <label for="remove_image" class="form-check-label">Remove current image</label>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted">No image uploaded</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- New Image Upload -->
+                            <div class="col-md-12 mb-3">
+                                <label for="image" class="form-label">Upload New Image</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                <div class="invalid-feedback" id="image-error"></div>
+                                <small class="text-muted">Upload a single image (JPEG, JPG, PNG)</small>
+                                
+                                <div class="preview-container" id="imagePreviewContainer">
+                                    <!-- Preview image will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Update Page</button>
+                                <a href="{% url 'facilities_amenities_list' %}" class="btn btn-secondary">Cancel</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    $(document).ready(function() {
+        // Image preview functionality for new image
+        $('#image').change(function() {
+            const file = this.files[0];
+            const previewContainer = $('#imagePreviewContainer');
+            previewContainer.empty();
+            
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewContainer.html(`
+                        <img src="${e.target.result}" class="preview-image" alt="Preview">
+                    `);
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form validation
+        function validateForm() {
+            let isValid = true;
+            
+            // Clear previous validation
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+            
+            // Validate Name
+            const name = $('#name').val().trim();
+            if (!name) {
+                $('#name').addClass('is-invalid');
+                $('#name-error').text('Name is required.');
+                isValid = false;
+            } else if (name.length > 200) {
+                $('#name').addClass('is-invalid');
+                $('#name-error').text('Name cannot exceed 200 characters.');
+                isValid = false;
+            }
+            
+            // Validate Image (either keep existing or upload new one)
+            const newImage = $('#image')[0].files[0];
+            const removeImage = $('#remove_image').is(':checked');
+            const hasCurrentImage = {% if facility.image %}true{% else %}false{% endif %};
+            
+            if (removeImage && !newImage) {
+                $('#image').addClass('is-invalid');
+                $('#image-error').text('Please upload a new image if removing the current one.');
+                isValid = false;
+            } else if (newImage) {
+                // Validate image file type and size
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                
+                if (!allowedTypes.includes(newImage.type)) {
+                    $('#image').addClass('is-invalid');
+                    $('#image-error').text('Only JPEG, JPG, or PNG images are allowed.');
+                    isValid = false;
+                }
+                
+                if (newImage.size > maxSize) {
+                    $('#image').addClass('is-invalid');
+                    $('#image-error').text('Image size cannot exceed 5MB.');
+                    isValid = false;
+                }
+            }
+            
+            return isValid;
+        }
+
+        // Form submission
+        $('#editFacilityForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (validateForm()) {
+                // Show loading state
+                const submitBtn = $(this).find('button[type="submit"]');
+                const originalText = submitBtn.html();
+                submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Updating...').prop('disabled', true);
+                
+                // Submit the form
+                this.submit();
+            }
+        });
+
+        // Real-time validation
+        $('#name').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $('#name-error').text('');
+        });
+
+        $('#image').on('change', function() {
+            $(this).removeClass('is-invalid');
+            $('#image-error').text('');
+        });
+
+        $('#remove_image').on('change', function() {
+            $('#image').removeClass('is-invalid');
+            $('#image-error').text('');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}State Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addStateModal">Add State</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Country</th>
+                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for state in states %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ state.name }}</td>
+                                        <td>{{ state.country.name }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if state.status %}success{% else %}danger{% endif %}">
+                                                {% if state.status %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ state.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu" onclick="toggleMenu(this)">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editStateModal" 
+                                                            data-state-id="{{ state.id }}" 
+                                                            data-state-name="{{ state.name }}"
+                                                            data-country-id="{{ state.country.id }}"
+                                                            data-state-status="{% if state.status %}true{% else %}false{% endif %}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteStateModal" data-state-id="{{ state.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add State Modal -->
+        <div class="modal fade" id="addStateModal" tabindex="-1" aria-labelledby="addStateModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addStateModalLabel">Add State</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'state_create' %}" id="addStateForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="name" name="name">
+                                    <div class="invalid-feedback" id="name-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="country" class="form-label">Country*</label>
+                                    <select class="form-control" id="country" name="country">
+                                        <option value="">Select Country</option>
+                                        {% for country in countries %}
+                                        <option value="{{ country.id }}">{{ country.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback" id="country-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="add_status" name="status" checked>
+                                        <label class="form-check-label" for="add_status">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Add State</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit State Modal -->
+        <div class="modal fade" id="editStateModal" tabindex="-1" aria-labelledby="editStateModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editStateModalLabel">Edit State</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editStateForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="stateId" name="id">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="edit_name" name="name">
+                                    <div class="invalid-feedback" id="edit_name-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_country" class="form-label">Country*</label>
+                                    <select class="form-control" id="edit_country" name="country">
+                                        <option value="">Select Country</option>
+                                        {% for country in countries %}
+                                        <option value="{{ country.id }}">{{ country.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback" id="edit_country-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="edit_status" name="status">
+                                        <label class="form-check-label" for="edit_status">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update State</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete State Modal -->
+        <div class="modal fade" id="deleteStateModal" tabindex="-1" aria-labelledby="deleteStateModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteStateModalLabel">Delete State</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="deleteStateForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="state_id" name="id">
+                            <p>Are you sure you want to delete this state?</p>
+                            <button type="submit" class="btn btn-danger">Delete State</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script>
+    $(document).ready(function() {
+        // Function to validate form fields
+        function validateForm(form) {
+            let isValid = true;
+            
+            // Validate Name
+            const nameInput = form.find('#name, #edit_name');
+            const nameError = form.find('#name-error, #edit_name-error');
+            if (nameInput.val().trim() === '') {
+                nameInput.addClass('is-invalid');
+                nameError.text('This field is required.');
+                isValid = false;
+            } else {
+                nameInput.removeClass('is-invalid');
+                nameError.text('');
+            }
+            
+            // Validate Country
+            const countryInput = form.find('#country, #edit_country');
+            const countryError = form.find('#country-error, #edit_country-error');
+            if (countryInput.val() === '') {
+                countryInput.addClass('is-invalid');
+                countryError.text('Please select a country.');
+                isValid = false;
+            } else {
+                countryInput.removeClass('is-invalid');
+                countryError.text('');
+            }
+            
+            return isValid;
+        }
+
+        // Add State Form Validation
+        $('#addStateForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Edit State Form Validation
+        $('#editStateForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Clear validation errors when modal is closed
+        $('.modal').on('hidden.bs.modal', function() {
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            $(this).find('.invalid-feedback').text('');
+        });
+
+        // Clear validation when user starts typing
+        $('#name, #edit_name, #country, #edit_country').on('input change', function() {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').text('');
+        });
+
+        // Edit State Modal initialization
+        $('#editStateModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var stateId = button.data('state-id');
+            var name = button.data('state-name');
+            var countryId = button.data('country-id');
+            var status = button.data('state-status'); // already boolean
+            
+            var form = $('#editStateForm');
+            form.attr('action', "{% url 'state_edit' 0 %}".replace("0", stateId));
+            form.find('#stateId').val(stateId);
+            form.find('#edit_name').val(name || "");
+            form.find('#edit_country').val(countryId || "");
+            form.find('#edit_status').prop('checked', status);
+        });
+
+        // Delete State Modal
+        $('#deleteStateModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var stateId = button.data('state-id');
+            $('#deleteStateForm').attr('action', "{% url 'state_delete' 0 %}".replace('0', stateId));
+        });
+
+        // Toggle action menu
+        $(document).on('click', '.three-dots-menu', function(e) {
+            e.preventDefault();
+            var actionCard = $(this).next('.action-card');
+            $('.action-card').not(actionCard).hide();
+            actionCard.toggle();
+        });
+
+        // Hide action card if clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.action-menu-container').length) {
+                $('.action-card').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}

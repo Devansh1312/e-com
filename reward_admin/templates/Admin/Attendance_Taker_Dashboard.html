@@ -1,0 +1,1025 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .event-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        margin-bottom: 20px;
+        height: 100%;
+    }
+    .event-card:hover {
+        transform: translateY(-5px);
+    }
+    .event-image {
+        height: 200px;
+        object-fit: cover;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+    .card-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-body-content {
+        flex: 1;
+    }
+    .attendance-btn {
+        background-color: #8378fd !important;
+        color: rgb(0, 0, 0) !important;
+        border: none;
+        flex: 1;
+        min-height: 44px; /* Minimum touch target size */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .attendance-btn:hover {
+        background-color: #3a2aec !important;
+        color: white !important;
+    }
+    .view-attendance-btn {
+        background-color: #26a543 !important;
+        color: rgb(0, 0, 0) !important;
+        border: none;
+        flex: 1;
+        min-height: 44px; /* Minimum touch target size */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .view-attendance-btn:hover {
+        background-color: #00ff15 !important;
+        color: rgb(0, 0, 0) !important;
+    }
+    .event-date {
+        color: #7366ff;
+        font-weight: bold;
+    }
+    .event-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    .upcoming {
+        background-color: #28a745;
+        color: white;
+    }
+    .ongoing {
+        background-color: #ffc107;
+        color: black;
+    }
+    .completed {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    /* Button container */
+    .button-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .button-container {
+            flex-direction: column;
+        }
+        
+        .attendance-btn, .view-attendance-btn {
+            width: 100%;
+        }
+    }
+    
+    /* Enhanced QR Scanner Styles */
+    #reader {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    #result, #manualResult {
+        margin-top: 20px;
+        text-align: center;
+    }
+    .scanner-container, .manual-entry-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+    }
+    .clickable-result {
+        cursor: pointer;
+    }
+    .success-message {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .error-message {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .info-message {
+        color: #17a2b8;
+        font-weight: bold;
+    }
+    .invoice-result {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 15px;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: bold;
+    }
+    .scanner-status {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    /* Bootstrap 4 compatibility for tab styling */
+    .nav-tabs .nav-link {
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        color: #495057;
+        text-decoration: none;
+    }
+    .nav-tabs .nav-link:hover, .nav-tabs .nav-link:focus {
+        border-color: #e9ecef #e9ecef #dee2e6;
+        isolation: isolate;
+    }
+    .nav-tabs .nav-link.active {
+        color: #495057;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+    
+    /* Enhanced alert styling */
+    .alert {
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+    }
+    .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+    }
+    .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+    }
+    .alert-danger {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    .alert-success {
+        color: #155724;
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+    }
+    
+    /* File upload and camera error styling improvements */
+    .scanner-status .alert-danger {
+        border: none;
+        text-align: left;
+    }
+    
+    /* Ensure proper spacing for action buttons */
+    .mt-3 {
+        margin-top: 1rem !important;
+    }
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+    .mr-2 {
+        margin-right: 0.5rem !important;
+    }
+    .ml-2 {
+        margin-left: 0.5rem !important;
+    }
+    
+    /* Loading spinner improvements */
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        border-width: 0.1em;
+    }
+    
+    /* Button group improvements for mobile */
+    @media (max-width: 576px) {
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+        
+        .d-flex.gap-2 .btn {
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-dialog {
+            margin: 1rem;
+        }
+        
+        #reader {
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block title %}Ticket Scanner Dashboard{% endblock %}
+
+{% block content %}
+{% include "components/loader.html" %}
+
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12">
+                    <h3>Ticket Scanner Dashboard</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for event in events %}
+            <div class="col-md-4 col-sm-6 mb-4">
+                <div class="card event-card">
+                    {% if event.image %}
+                    <img src="{{ event.image.url }}" class="card-img-top event-image" alt="{{ event.title }}">
+                    {% else %}
+                    <div class="event-image bg-light d-flex align-items-center justify-content-center">
+                        <i class="fas fa-calendar-alt fa-4x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <span class="event-status 
+                            {% if event.event_date > today %}upcoming
+                            {% elif event.event_date == today %}ongoing
+                            {% else %}completed{% endif %}">
+                            {% if event.event_date > today %}Upcoming
+                            {% elif event.event_date == today %}Ongoing
+                            {% else %}Completed{% endif %}
+                        </span>
+                        
+                        <div class="card-body-content">
+                            <h5 class="card-title">{{ event.title }}</h5>
+                            <p class="card-text">
+                                <i class="fas fa-calendar-day"></i> 
+                                <span class="event-date">{{ event.event_date|date:"F j, Y" }}</span><br>
+                                <i class="fas fa-clock"></i> {{ event.event_start_time|time:"g:i A" }} - {{ event.event_end_time|time:"g:i A" }}<br>
+                                <i class="fas fa-map-marker-alt"></i> {{ event.location|default:"Venue TBD" }}
+                            </p>
+                        </div>
+                        
+                        <div class="button-container">
+                            <button class="btn attendance-btn" data-toggle="modal" data-target="#attendanceModal" 
+                                data-event-id="{{ event.id }}">
+                                <i class="fas fa-qrcode"></i> Take Attendance
+                            </button>
+                            <form method="post" action="{% url 'event_attendance_list' %}" style="display: inline; flex: 1;">
+                                {% csrf_token %}
+                                <input type="hidden" name="event_id" value="{{ event.id }}">
+                                <button type="submit" class="btn view-attendance-btn">
+                                    <i class="fas fa-list"></i> View Attendance
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No events assigned for Ticket Scanner.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Updated Attendance Modal for Invoice Scanning -->
+<div class="modal fade" id="attendanceModal" tabindex="-1" role="dialog" aria-labelledby="attendanceModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="attendanceModalLabel">
+                    <i class="fas fa-qrcode"></i> Scan Invoice QR Code
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="attendanceTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="scan-tab" data-toggle="tab" href="#scan" role="tab">
+                            <i class="fas fa-qrcode"></i> QR Scanner
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="manual-tab" data-toggle="tab" href="#manual" role="tab">
+                            <i class="fas fa-keyboard"></i> Manual Entry
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="scan" role="tabpanel">
+                        <div class="scanner-container">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Scan the invoice QR code to mark attendance for all tickets in the booking
+                            </div>
+                            <div id="reader"></div>
+                            <div id="result" class="invoice-result"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="manual" role="tabpanel">
+                        <div class="manual-entry-container">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Enter the invoice number manually if QR code scanning is not possible
+                            </div>
+                            <div class="form-group">
+                                <label for="manualInvoiceNumber">Invoice Number</label>
+                                <input type="text" class="form-control" id="manualInvoiceNumber" 
+                                       placeholder="Enter invoice number">
+                            </div>
+                            <button style="margin-top: 10px;" id="manualSubmitBtn" class="btn btn-primary">
+                                <i class="fas fa-check-circle"></i> Submit
+                            </button>
+                            <div id="manualResult" class="invoice-result mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scriptcontent %}
+<!-- jQuery first, then Bootstrap, then other plugins -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- QR Scanner JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // QR Scanner functionality with improved camera management
+    let scanner = null;
+    let currentEventId = null;
+    let isScannerActive = false;
+    let scannerCleanupInProgress = false;
+    let currentCameraId = null;
+    let currentStream = null;
+    
+    // Reset scanner state when modal opens
+    $('#attendanceModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        currentEventId = button.data('event-id');
+        console.log("Event ID set to:", currentEventId);
+        
+        // Reset form fields
+        $('#manualInvoiceNumber').val('');
+        $('#manualResult').empty();
+        $('#result').empty();
+        
+        // Reset scanner state
+        isScannerActive = false;
+        scannerCleanupInProgress = false;
+        currentCameraId = null;
+        currentStream = null;
+    });
+
+    // Initialize scanner when modal is shown and scan tab is active
+    $('#attendanceModal').on('shown.bs.modal', function() {
+        setTimeout(() => {
+            if ($('#scan-tab').hasClass('active') && !isScannerActive && !scannerCleanupInProgress) {
+                initializeScanner();
+            }
+        }, 200); // Increased delay
+    });
+    
+    // Handle tab switching
+    $('#scan-tab').on('shown.bs.tab', function() {
+        setTimeout(() => {
+            if (!isScannerActive && !scannerCleanupInProgress) {
+                initializeScanner();
+            }
+        }, 200); // Increased delay
+    });
+    
+    $('#manual-tab').on('shown.bs.tab', function() {
+        cleanupScanner().then(() => {
+            $('#manualInvoiceNumber').focus();
+        });
+    });
+    
+    // Clean up scanner when modal closes
+    $('#attendanceModal').on('hidden.bs.modal', function() {
+        if (window.attendanceSuccess) {
+            console.log("Attendance was successful, reloading page...");
+            location.reload();
+        }
+        // Reset the flag
+        window.attendanceSuccess = false;
+    });
+
+
+    // Manual submission handler
+    $('#manualSubmitBtn').click(function() {
+        const invoiceNumber = $('#manualInvoiceNumber').val().trim();
+        if (!invoiceNumber) {
+            showAlert('#manualResult', 'danger', 'Please enter an invoice number');
+            return;
+        }
+        
+        processAttendance(invoiceNumber, '#manualResult');
+    });
+
+    // Allow Enter key to submit manual form
+    $('#manualInvoiceNumber').keypress(function(e) {
+        if (e.which === 13) {
+            $('#manualSubmitBtn').click();
+        }
+    });
+
+    // Enhanced cleanup function with proper camera stream management
+    function cleanupScanner() {
+        return new Promise((resolve) => {
+            if (scannerCleanupInProgress) {
+                console.log("Cleanup already in progress, waiting...");
+                // Wait for current cleanup to finish
+                const checkCleanup = setInterval(() => {
+                    if (!scannerCleanupInProgress) {
+                        clearInterval(checkCleanup);
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+
+            scannerCleanupInProgress = true;
+            console.log("Starting scanner cleanup...");
+
+            // Stop all media tracks first
+            stopAllCameraTracks().then(() => {
+                // Then handle the scanner
+                if (scanner && isScannerActive) {
+                    try {
+                        console.log("Stopping scanner...");
+                        scanner.stop().then(() => {
+                            console.log("Scanner stopped successfully");
+                            finalizeCleanup();
+                            resolve();
+                        }).catch((stopError) => {
+                            console.log("Scanner stop error, trying clear:", stopError);
+                            // If stop fails, try clear
+                            if (scanner && typeof scanner.clear === 'function') {
+                                scanner.clear().then(() => {
+                                    console.log("Scanner cleared successfully");
+                                    finalizeCleanup();
+                                    resolve();
+                                }).catch((clearError) => {
+                                    console.log("Scanner clear also failed:", clearError);
+                                    finalizeCleanup();
+                                    resolve();
+                                });
+                            } else {
+                                finalizeCleanup();
+                                resolve();
+                            }
+                        });
+                    } catch (error) {
+                        console.log("Exception during scanner cleanup:", error);
+                        finalizeCleanup();
+                        resolve();
+                    }
+                } else {
+                    finalizeCleanup();
+                    resolve();
+                }
+            });
+
+            function finalizeCleanup() {
+                // Reset all variables
+                scanner = null;
+                isScannerActive = false;
+                currentCameraId = null;
+                currentStream = null;
+                
+                // Clear the reader element
+                $('#reader').empty();
+                
+                // Reset cleanup flag
+                scannerCleanupInProgress = false;
+                
+                console.log("Scanner cleanup completed successfully");
+            }
+        });
+    }
+
+    // Function to stop all camera tracks
+    function stopAllCameraTracks() {
+        return new Promise((resolve) => {
+            try {
+                // Get all video elements that might be using the camera
+                const videoElements = document.querySelectorAll('#reader video');
+                
+                // Stop tracks from video elements
+                videoElements.forEach(video => {
+                    if (video.srcObject) {
+                        const stream = video.srcObject;
+                        const tracks = stream.getTracks();
+                        tracks.forEach(track => {
+                            console.log("Stopping track:", track.kind, track.label);
+                            track.stop();
+                        });
+                        video.srcObject = null;
+                    }
+                });
+
+                // Also stop current stream if we have reference to it
+                if (currentStream) {
+                    const tracks = currentStream.getTracks();
+                    tracks.forEach(track => {
+                        console.log("Stopping current stream track:", track.kind, track.label);
+                        track.stop();
+                    });
+                    currentStream = null;
+                }
+
+                // Wait a bit for tracks to fully stop
+                setTimeout(() => {
+                    console.log("All camera tracks stopped");
+                    resolve();
+                }, 500);
+
+            } catch (error) {
+                console.log("Error stopping camera tracks:", error);
+                resolve(); // Continue even if there's an error
+            }
+        });
+    }
+
+    function initializeScanner() {
+        if (isScannerActive || scannerCleanupInProgress) {
+            console.log("Scanner already active or cleanup in progress, skipping initialization");
+            return;
+        }
+        
+        console.log("Initializing scanner...");
+        
+        // Ensure reader element is completely clean
+        const readerElement = document.getElementById('reader');
+        if (readerElement) {
+            readerElement.innerHTML = '';
+        }
+        
+        $('#reader').html(`
+            <div class="scanner-status">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <p class="text-muted">Initializing camera...</p>
+            </div>
+        `);
+        $('#result').empty();
+        
+        // Wait a bit before starting to ensure any previous camera usage is fully released
+        setTimeout(() => {
+            Html5Qrcode.getCameras().then(devices => {
+                if (scannerCleanupInProgress) {
+                    console.log("Cleanup requested during camera detection, aborting initialization");
+                    return;
+                }
+
+                if (devices && devices.length > 0) {
+                    try {
+                        // Completely reset the reader container
+                        $('#reader').empty();
+                        
+                        // Create a completely new scanner instance
+                        scanner = new Html5QrcodeScanner(
+                            'reader', 
+                            {
+                                qrbox: { width: 250, height: 250 },
+                                fps: 15, // Reduced FPS to be less resource intensive
+                                aspectRatio: 1.0,
+                                showTorchButtonIfSupported: true,
+                                showZoomSliderIfSupported: true,
+                                rememberLastUsedCamera: false, // Don't remember last camera to avoid caching issues
+                                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
+                                videoConstraints: {
+                                    facingMode: "environment" // Prefer back camera
+                                },
+                                // Disable any caching to ensure fresh scans
+                                disableFlip: false,
+                                experimentalFeatures: {
+                                    useBarCodeDetectorIfSupported: false // Disable caching features
+                                }
+                            },
+                            false // Verbose mode off
+                        );
+                        
+                        let hasProcessedScan = false; // Prevent duplicate processing
+                        
+                        scanner.render(
+                            function onScanSuccess(decodedText, decodedResult) {
+                                if (!isScannerActive || hasProcessedScan) {
+                                    console.log("Scanner not active or already processed scan, ignoring scan result");
+                                    return;
+                                }
+                                
+                                hasProcessedScan = true; // Mark as processed immediately
+                                console.log("QR Code detected:", decodedText);
+                                console.log("Scan result:", decodedResult);
+                                
+                                // Immediately stop scanning to prevent multiple scans
+                                isScannerActive = false;
+                                
+                                // Show processing message
+                                $('#result').html('<div class="alert alert-info">Processing scanned invoice...</div>');
+                                
+                                // Clean up scanner with delay to ensure proper camera release
+                                cleanupScanner().then(() => {
+                                    // Process the attendance after cleanup is complete
+                                    setTimeout(() => {
+                                        processAttendance(decodedText, '#result');
+                                    }, 300);
+                                });
+                            },
+                            function onScanError(error, html) {
+                                // Only show camera-related errors, not scan failures
+                                if (error && (
+                                    error.includes('NotAllowedError') ||
+                                    error.includes('NotReadableError') ||
+                                    error.includes('NotFoundError') ||
+                                    error.includes('Permission denied') ||
+                                    error.includes('OverconstrainedError')
+                                )) {
+                                    console.error("Camera error:", error);
+                                    showCameraError("Camera Access Error", error);
+                                    return;
+                                }
+                                
+                                // For other errors (like scan failures), just log them
+                                console.debug("Scan attempt:", error);
+                            }
+                        );
+                        
+                        // Store reference to the stream for cleanup
+                        setTimeout(() => {
+                            const videoElement = document.querySelector('#reader video');
+                            if (videoElement && videoElement.srcObject) {
+                                currentStream = videoElement.srcObject;
+                                console.log("Stored reference to current stream");
+                            }
+                        }, 1000);
+                        
+                        isScannerActive = true;
+                        console.log("Scanner initialized and activated successfully");
+                        
+                        // Add custom event listener for file upload results
+                        setTimeout(() => {
+                            addFileUploadListener();
+                        }, 1000);
+                        
+                    } catch (initError) {
+                        console.error("Scanner initialization error:", initError);
+                        showCameraError("Scanner Setup Failed", initError.message || initError);
+                    }
+                } else {
+                    showCameraError("No Camera Found", "No camera devices were detected on your device");
+                }
+            }).catch(err => {
+                console.error("Camera access error:", err);
+                if (err.name === 'NotAllowedError' || err.message.includes('Permission denied')) {
+                    showCameraError("Camera Permission Denied", "Please allow camera access and refresh the page");
+                } else if (err.name === 'NotFoundError') {
+                    showCameraError("No Camera Found", "No camera devices were detected on your device");
+                } else if (err.name === 'NotReadableError') {
+                    showCameraError("Camera Not Available", "Camera is being used by another application");
+                } else {
+                    showCameraError("Camera Access Error", "Unable to access camera. Please check your device settings");
+                }
+            });
+        }, 1000); // Increased delay to 1 second to ensure complete cleanup
+    }
+
+    // Add listener for file upload events
+    function addFileUploadListener() {
+        const fileInput = document.querySelector('#reader input[type="file"]');
+        if (fileInput) {
+            console.log("File input found, adding listeners");
+            
+            // Monitor file selection
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    console.log("File selected:", file.name);
+                    showAlert('#result', 'info', 'Processing uploaded image...', true);
+                    
+                    // Set a timeout to check if scanning was successful
+                    setTimeout(() => {
+                        checkFileUploadResult();
+                    }, 3000); // Wait 3 seconds for processing
+                }
+            });
+        } else {
+            // Retry finding the file input after a short delay
+            setTimeout(addFileUploadListener, 500);
+        }
+    }
+
+    // Check if file upload scanning failed
+    function checkFileUploadResult() {
+        // If we still have an active scanner and result is showing "processing", it likely failed
+        if (isScannerActive && $('#result .alert-info:contains("Processing uploaded image")').length > 0) {
+            console.log("File upload appears to have failed - no result detected");
+            showAlert('#result', 'warning', `
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Unable to detect QR code in the uploaded image. Please ensure:
+                <ul class="mt-2 mb-0">
+                    <li>The image contains a clear QR code</li>
+                    <li>The QR code is not blurry or distorted</li>
+                    <li>The image has good lighting and contrast</li>
+                </ul>
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-primary" onclick="window.restartScanner()">
+                        <i class="fas fa-redo mr-1"></i> Try Another Image
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary ml-2" onclick="$('#manual-tab').tab('show')">
+                        <i class="fas fa-keyboard mr-1"></i> Manual Entry
+                    </button>
+                </div>
+            `);
+        }
+    }
+
+    function showCameraError(title, message) {
+        console.log("Showing camera error:", title, message);
+        let detailedMessage = message;
+        let actionButtons = '';
+        
+        if (title.includes("Permission")) {
+            detailedMessage = "Camera access was denied. Please allow camera permissions in your browser and refresh the page, or use manual entry below.";
+            actionButtons = `
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-sm mr-2" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> Refresh Page
+                    </button>
+                </div>
+            `;
+        } else if (title.includes("No Camera")) {
+            detailedMessage = "No camera was found on your device. You can still upload QR code images or use manual entry.";
+            actionButtons = `
+                <div class="mt-3">
+                    <button class="btn btn-secondary btn-sm" onclick="$('#manual-tab').tab('show')">
+                        <i class="fas fa-keyboard"></i> Use Manual Entry
+                    </button>
+                </div>
+            `;
+        } else if (title.includes("Camera Not Available")) {
+            detailedMessage = "The camera is currently being used by another application. Please close other applications using the camera and try again.";
+            actionButtons = `
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-sm mr-2" onclick="window.restartScannerWithDelay()">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="$('#manual-tab').tab('show')">
+                        <i class="fas fa-keyboard"></i> Manual Entry
+                    </button>
+                </div>
+            `;
+        } else {
+            actionButtons = `
+                <div class="mt-3">
+                    <button class="btn btn-primary btn-sm mr-2" onclick="window.restartScannerWithDelay()">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="$('#manual-tab').tab('show')">
+                        <i class="fas fa-keyboard"></i> Manual Entry
+                    </button>
+                </div>
+            `;
+        }
+        
+        $('#reader').html(`
+            <div class="scanner-status">
+                <div class="alert alert-danger">
+                    <i class="fas fa-camera-slash fa-3x mb-3 text-danger"></i>
+                    <h5 class="alert-heading">${title}</h5>
+                    <p class="mb-0">${detailedMessage}</p>
+                    ${actionButtons}
+                </div>
+            </div>
+        `);
+        
+        $('#result').html(`
+            <div class="alert alert-info">
+                <i class="fas fa-lightbulb mr-2"></i>
+                <strong>Tip:</strong> You can still mark attendance using the Manual Entry tab above.
+            </div>
+        `);
+    }
+
+    function processAttendance(invoiceNumber, resultContainer) {
+        console.log("Processing attendance for invoice:", invoiceNumber);
+        showAlert(resultContainer, 'info', 'Processing Invoice QR Code...', true);
+        
+        $.ajax({
+            url: "{% url 'mark_attendance' %}",
+            method: 'POST',
+            data: {
+                'invoice_number': invoiceNumber,
+                'event_id': currentEventId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                console.log("Attendance processing response:", response);
+                let alertType = response.status === 'error' ? 'danger' : 
+                            (response.status === 'info' ? 'warning' : 'success');
+                
+                let message = `${response.message}`;
+                
+                if (response.tickets_marked !== undefined) {
+                    message += ` (${response.tickets_marked} tickets processed)`;
+                }
+                
+                showAlert(resultContainer, alertType, message);
+                
+                // Store success status for later page reload
+                if (response.status === 'success') {
+                    // Set flag to reload when modal closes
+                    window.attendanceSuccess = true;
+                    
+                    // Add action buttons
+                    if (resultContainer === '#manualResult') {
+                        $(resultContainer + ' .alert').append(`
+                            <button class="btn btn-sm btn-outline-secondary mt-2" 
+                                    onclick="$('#manualResult').empty(); $('#manualInvoiceNumber').val('').focus();">
+                                <i class="fa fa-repeat"></i> Enter Another
+                            </button>
+                        `);
+                    } else {
+                        $(resultContainer + ' .alert').append(`
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="window.restartScannerWithDelay()">
+                                    <i class="fa fa-qrcode mr-1"></i> Scan Another
+                                </button>
+                            </div>
+                        `);
+                    }
+                } else {
+                    // For non-success responses, add appropriate buttons
+                    if (resultContainer === '#manualResult') {
+                        $(resultContainer + ' .alert').append(`
+                            <button class="btn btn-sm btn-outline-secondary mt-2" 
+                                    onclick="$('#manualResult').empty(); $('#manualInvoiceNumber').val('').focus();">
+                                <i class="fa fa-repeat"></i> Try Again
+                            </button>
+                        `);
+                    } else {
+                        $(resultContainer + ' .alert').append(`
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="window.restartScannerWithDelay()">
+                                    <i class="fa fa-qrcode mr-1"></i> Try Again
+                                </button>
+                            </div>
+                        `);
+                    }
+                }
+            },
+            error: function(xhr) {
+                console.error("Attendance processing error:", xhr);
+                let errorMessage = xhr.responseJSON?.message || xhr.statusText || 'Unknown error';
+                showAlert(resultContainer, 'danger', `
+                    <i class="fa fa-exclamation-triangle mr-2"></i>
+                    ${errorMessage}
+                `);
+                
+                if (resultContainer === '#manualResult') {
+                    $(resultContainer + ' .alert').append(`
+                        <br>
+                        <button class="btn btn-sm btn-outline-secondary mt-2" 
+                                onclick="$('#manualResult').empty(); $('#manualInvoiceNumber').val('').focus();">
+                            <i class="fa fa-repeat"></i> Try Again
+                        </button>
+                    `);
+                } else {
+                    $(resultContainer + ' .alert').append(`
+                        <br>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="window.restartScannerWithDelay()">
+                                <i class="fa fa-qrcode mr-1"></i> Try Again
+                            </button>
+                        </div>
+                    `);
+                }
+            }
+        });
+    }
+
+    function showAlert(container, type, message, showSpinner = false) {
+        let spinner = showSpinner ? 
+            '<div class="spinner-border spinner-border-sm mr-2" role="status"></div>' : '';
+        
+        $(container).html(`
+            <div class="alert alert-${type}">
+                ${spinner}
+                ${message}
+            </div>
+        `);
+    }
+
+    // Make restartScanner globally accessible with immediate restart
+    window.restartScanner = function() {
+        console.log("Restarting scanner immediately...");
+        cleanupScanner().then(() => {
+            $('#result').empty();
+            // Start immediately for file uploads
+            setTimeout(() => {
+                initializeScanner();
+            }, 300);
+        });
+    };
+    
+    // Enhanced delayed restart function for camera availability issues
+    window.restartScannerWithDelay = function() {
+        console.log("Restarting scanner with extended delay for camera availability...");
+        cleanupScanner().then(() => {
+            $('#result').empty();
+            $('#reader').html(`
+                <div class="scanner-status">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <p class="text-muted">Releasing camera resources...</p>
+                    <p class="text-muted small">Please wait a moment</p>
+                </div>
+            `);
+            
+            // Extended wait time to ensure camera is fully released
+            setTimeout(() => {
+                $('#reader').html(`
+                    <div class="scanner-status">
+                        <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                        <p class="text-muted">Initializing camera...</p>
+                    </div>
+                `);
+                
+                // Additional delay before initialization
+                setTimeout(() => {
+                    initializeScanner();
+                }, 500);
+            }, 1500); // Total delay of 2 seconds
+        });
+    };
+
+    // Helper function to show camera permission help
+    window.showCameraHelp = function() {
+        const helpContent = `
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle"></i> How to enable camera permissions:</h6>
+                <div class="mt-2">
+                    <strong>Chrome/Edge:</strong><br>
+                    • Click the camera icon in the address bar<br>
+                    • Select "Allow" and refresh the page<br><br>
+                    
+                    <strong>Firefox:</strong><br>
+                    • Click the shield icon in the address bar<br>
+                    • Enable camera permissions<br><br>
+                    
+                    <strong>Safari:</strong><br>
+                    • Go to Safari > Settings > Websites > Camera<br>
+                    • Allow camera access for this site
+                </div>
+            </div>
+        `;
+        
+        $('#result').html(helpContent);
+    };
+});
+</script>
+{% endblock %}

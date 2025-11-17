@@ -1,0 +1,489 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+{% load permission_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<style>
+    .badge {
+        padding: 0.35em 0.65em;
+        font-size: 0.875em;
+        font-weight: 500;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+    }
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+    }
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .badge-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+    .badge-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .filter-container {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .filter-container .form-group {
+        margin-bottom: 10px;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Referred User List{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h3 class="mb-0">{{ breadcrumb.child }}</h3>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Filters</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 filter-container">
+                            <div class="col-lg-3 col-md-6 col-12">
+                                <div class="form-group">
+                                    <label for="referralTypeFilter">Referral Type</label>
+                                    <select class="form-control form-control-sm" id="referralTypeFilter">
+                                        <option value="">All Types</option>
+                                        {% for type in referral_types %}
+                                            <option value="{{ type.id }}">{{ type.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                                <div class="form-group">
+                                    <label for="statusFilter">Status</label>
+                                    <select class="form-control form-control-sm" id="statusFilter">
+                                        <option value="">All Status</option>
+                                        <option value="1">Pending</option>
+                                        <option value="2">Approved</option>
+                                        <option value="3">Rejected</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12">
+                                <div class="form-group">
+                                    <label for="staffNameFilter">Staff Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="staffNameFilter" placeholder="Search staff name">
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 col-12 d-flex align-items-end">
+                                <div class="form-group">
+                                    <button class="btn btn-primary btn-sm w-auto" id="applyFilters">Apply</button>
+                                </div>
+                                <div style="margin-left: 10px;" class="form-group">
+                                    <button class="btn btn-secondary btn-sm w-auto" id="resetFilters">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="referredUsersTable" style="width:100%">
+                                <thead style="font-size: small; white-space: nowrap;">
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Referred By</th>
+                                        <th>Referral Type</th>
+                                        <th>Staff Name</th>
+                                        <th>Status</th>
+                                        <th>Referred Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="font-size: small;">
+                                    <!-- Data will be loaded via DataTables -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View User Details Modal -->
+<div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="viewUserModalLabel">Referred User Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">User Information</h6>
+                        <div class="mb-2">
+                            <strong>Name:</strong> <span id="modal-name"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Phone:</strong> <span id="modal-phone"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Email:</strong> <span id="modal-email"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Date of Birth:</strong> <span id="modal-dob"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Referral Type:</strong> <span id="modal-referral-type"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Staff Name:</strong> <span id="modal-staff-name"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Status:</strong> 
+                            <span id="modal-status" class="badge"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Referral Time:</strong> <span id="modal-created"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">Referred By</h6>
+                        <div class="mb-2">
+                            <strong>Name:</strong> <span id="modal-referred-name"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Membership ID:</strong> 
+                            <a id="modal-referred-membership-link" href="#" data-user-id="">
+                                <span id="modal-referred-membership_id"></span>
+                            </a>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Email:</strong> <span id="modal-referred-email"></span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Phone:</strong> <span id="modal-referred-phone"></span>
+                        </div>
+                        <h6 class="text-primary mb-3 mt-3">Remarks</h6>
+                        <div class="mb-2">
+                            <span id="modal-remark" style="word-break: break-word;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<!-- Required JS -->
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js' %}"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Toastr for notifications -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+<script>
+$(document).ready(function() {
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initialize DataTable with server-side processing
+    var table = $('#referredUsersTable').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "ajax": {
+            "url": window.location.pathname,
+            "type": "POST",
+            "data": function(d) {
+                // Add CSRF token
+                d.csrfmiddlewaretoken = getCookie('csrftoken');
+                // Add filter values
+                d.referral_type = $('#referralTypeFilter').val();
+                d.status = $('#statusFilter').val();
+                d.staff_name = $('#staffNameFilter').val();
+            },
+            "error": function(xhr, error, code) {
+                console.error(xhr, error, code);
+                // Show error message in table
+                $('#referredUsersTable').DataTable().clear().draw();
+                $('#referredUsersTable tbody').html(
+                    '<tr><td colspan="10" class="text-center text-danger py-4">' +
+                    '<i class="fas fa-exclamation-circle mr-2"></i>Error loading data</td></tr>'
+                );
+            }
+        },
+        "columns": [
+            { "data": "counter", "orderable": false },
+            { "data": "name", "orderable": true },
+            { "data": "phone", "orderable": true },
+            { "data": "email", "orderable": true },
+            { "data": "referred_by", "orderable": true },
+            { "data": "referral_type", "orderable": true },
+            { "data": "staff_name", "orderable": true },
+            { "data": "status", "orderable": true },
+            { "data": "created_at", "orderable": true },
+            { 
+                "data": "actions", 
+                "orderable": false,
+                "render": function(data, type, row) {
+                    return data;
+                }
+            }
+        ],
+        "order": [[8, 'desc']], // Default order by created_at descending
+        "responsive": true,
+        "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+        "pageLength": 10,
+        "language": {
+            "lengthMenu": "Show _MENU_ entries",
+            "zeroRecords": "No matching records found",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "search": "Search:",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        },
+        "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+               "<'row'<'col-sm-12'tr>>" +
+               "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        "initComplete": function() {
+            // Add custom styling after table initialization
+            $('.dataTables_length select').addClass('form-control form-control-sm');
+            $('.dataTables_filter input').addClass('form-control form-control-sm');
+        }
+    });
+
+    // Apply filters button
+    $('#applyFilters').on('click', function() {
+        table.ajax.reload();
+    });
+
+    // Reset filters button
+    $('#resetFilters').on('click', function() {
+        $('#referralTypeFilter').val('');
+        $('#statusFilter').val('');
+        $('#staffNameFilter').val('');
+        table.ajax.reload();
+    });
+
+    // Handle three-dots menu toggle
+    $(document).on('click', '.three-dots-menu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Close all other open menus
+        $('.action-card').hide();
+        
+        // Toggle current menu
+        $(this).siblings('.action-card').toggle();
+    });
+
+    // Close menu when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.action-menu-container').length) {
+            $('.action-card').hide();
+        }
+    });
+
+    // Handle membership ID click to redirect to club member detail
+    $(document).on('click', '#modal-referred-membership-link', function(e) {
+        e.preventDefault();
+        var userId = $(this).data('user-id');
+        if (userId && userId !== 'N/A') {
+            window.location.href = '/club-member/detail/' + userId + '/';
+        }
+    });
+
+    // Update the modal data population to include the referred_by ID and referral type
+    $(document).on('click', '.view-referred-user', function(e) {
+        e.preventDefault();
+        var userId = $(this).data('id');
+        
+        $.ajax({
+            url: '/reffral-user/' + userId + '/detail/',
+            type: 'GET',
+            success: function(response) {
+                // Handle status with appropriate badge
+                var statusElement = $('#modal-status');
+                statusElement.text(response.status || 'N/A');
+                
+                // Remove all badge classes first
+                statusElement.removeClass('badge-success badge-warning badge-danger badge-secondary');
+                
+                // Add appropriate badge class based on status
+                if (response.status) {
+                    const statusText = response.status.toLowerCase();
+                    if (statusText.includes('active') || statusText.includes('approved')) {
+                        statusElement.addClass('badge-success');
+                    } else if (statusText.includes('pending')) {
+                        statusElement.addClass('badge-warning');
+                    } else if (statusText.includes('rejected') || statusText.includes('inactive')) {
+                        statusElement.addClass('badge-danger');
+                    } else {
+                        statusElement.addClass('badge-secondary');
+                    }
+                } else {
+                    statusElement.addClass('badge-secondary');
+                }
+                
+                // Populate modal with user data
+                $('#modal-name').text(response.name || 'N/A');
+                $('#modal-phone').text(response.phone || 'N/A');
+                $('#modal-email').text(response.email || 'N/A');
+                $('#modal-dob').text(response.date_of_birth || 'N/A');
+                $('#modal-referral-type').text(response.referral_type?.name || 'N/A');
+                $('#modal-staff-name').text(response.staff_name || 'N/A');
+                $('#modal-status').text(response.status || 'N/A');
+                $('#modal-created').text(response.created_at || 'N/A');
+                $('#modal-remark').text(response.remark || 'No remarks');
+                
+                // Populate referred by data
+                if (response.referred_by) {
+                    $('#modal-referred-name').text(response.referred_by.name || 'N/A');
+                    $('#modal-referred-membership_id').text(response.referred_by.membership_id || 'N/A');
+                    $('#modal-referred-email').text(response.referred_by.email || 'N/A');
+                    $('#modal-referred-phone').text(response.referred_by.phone || 'N/A');
+                    
+                    // Set the user ID for the link
+                    if (response.referred_by_id) {
+                        $('#modal-referred-membership-link')
+                            .data('user-id', response.referred_by_id)
+                            .attr('href', '/club-member/detail/' + response.referred_by_id + '/');
+                    } else {
+                        $('#modal-referred-membership-link')
+                            .removeData('user-id')
+                            .removeAttr('href');
+                    }
+                } else {
+                    $('#modal-referred-name').text('N/A');
+                    $('#modal-referred-membership_id').text('N/A');
+                    $('#modal-referred-email').text('N/A');
+                    $('#modal-referred-phone').text('N/A');
+                    $('#modal-referred-membership-link')
+                        .removeData('user-id')
+                        .removeAttr('href');
+                }
+                
+                // Hide action menu and show modal
+                $('.action-card').hide();
+                var modal = new bootstrap.Modal(document.getElementById('viewUserModal'));
+                modal.show();
+            },
+            error: function(xhr) {
+                toastr.error('Error loading user details');
+                $('.action-card').hide();
+            }
+        });
+    });
+
+    // Handle approve/reject actions
+    $(document).on('click', '.approve-btn, .reject-btn', function(e) {
+        e.preventDefault();
+        var button = $(this);
+        var referredUserId = button.data('id');
+        var status = button.hasClass('approve-btn') ? 'approve' : 'reject';
+        var url = button.data('url');
+        
+        button.prop('disabled', true);
+        var originalText = button.text();
+        button.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                status: status === 'approve' ? '2' : '3'  // Send integer values
+            },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success('Status updated successfully');
+                    $('.action-card').hide(); // Hide menu
+                    table.ajax.reload();
+                } else {
+                    toastr.error(response.error || 'Error updating status');
+                }
+            },
+            error: function(xhr) {
+                try {
+                    var error = JSON.parse(xhr.responseText);
+                    toastr.error(error.error || 'Error updating status');
+                } catch (e) {
+                    toastr.error('An error occurred while processing your request');
+                }
+            },
+            complete: function() {
+                button.prop('disabled', false);
+                button.html(originalText);
+                $('.action-card').hide(); // Hide menu after completion
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

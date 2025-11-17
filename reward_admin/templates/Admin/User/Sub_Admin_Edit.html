@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+{% load permission_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<style>
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        min-height: 38px;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #7366ff;
+        border-color: #7366ff;
+        color: white;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: white;
+    }
+    .password-toggle {
+        cursor: pointer;
+    }
+    .form-section {
+        background: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Edit Sub Admin{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h4 class="card-title mb-0">Edit Sub Admin</h4>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-secondary btn-sm" href="{% url 'sub_admin_list' %}">
+                                <i class="fa fa-arrow-left me-1"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>{{ sub_admin.name }} Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="editSubAdminForm" method="post" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="id" value="{{ sub_admin.id }}">
+                            
+                            <div class="form-section">
+                                <h6 class="mb-3">Basic Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="name">Full Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="name" name="name" value="{{ sub_admin.name }}" required>
+                                            <div class="invalid-feedback" id="name-error">Please provide a name.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="email">Email <span class="text-danger">*</span></label>
+                                            <input type="email" class="form-control" id="email" name="email" value="{{ sub_admin.email }}" required>
+                                            <div class="invalid-feedback" id="email-error">Please provide a valid email.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="phone">Phone <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="phone" name="phone" value="{{ sub_admin.phone }}" required>
+                                            <div class="invalid-feedback" id="phone-error">Please provide a phone number.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h6 class="mb-3">Location Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="state">State <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="state" name="state" required>
+                                                <option value="">Select State</option>
+                                                {% for state in states %}
+                                                <option value="{{ state.id }}" {% if state.id == sub_admin.state.id %}selected{% endif %}>{{ state.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback" id="state-error">Please select a state.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="cities">Cities <span class="text-danger">*</span></label>
+                                            <select class="form-control select2-multiple" id="cities" name="cities" multiple="multiple" required>
+                                                {% for city in sub_admin.cities.all %}
+                                                <option value="{{ city.id }}" selected>{{ city.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="invalid-feedback" id="cities-error">Please select at least one city.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h6 class="mb-3">Account Security</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="password">New Password (leave blank to keep current)</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="password" name="password">
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text password-toggle">
+                                                        <i class="fas fa-eye"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="invalid-feedback" id="password-error"></div>
+                                            <small class="form-text text-muted">Minimum 8 characters</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="confirm_password">Confirm New Password</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text password-toggle">
+                                                        <i class="fas fa-eye"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="invalid-feedback" id="confirm_password-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group text-right">
+                                <a href="{% url 'sub_admin_list' %}" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" id="editSubAdminSubmit">
+                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                    Update Sub Admin
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2
+    $('.select2-multiple').select2({
+        placeholder: "Select cities",
+        allowClear: true
+    });
+
+    // Helper function to set button loading state
+    function setButtonLoading(button, isLoading) {
+        if (isLoading) {
+            button.prop('disabled', true);
+            button.find('.spinner-border').removeClass('d-none');
+        } else {
+            button.prop('disabled', false);
+            button.find('.spinner-border').addClass('d-none');
+        }
+    }
+
+    // Password toggle functionality
+    $(document).on('click', '.password-toggle', function() {
+        const input = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // Load cities when state changes
+    $('#state').on('change', function() {
+        const stateId = $(this).val();
+        if (!stateId) return;
+        
+        $.ajax({
+            url: '/get-cities/',
+            type: 'GET',
+            data: { state_id: stateId },
+            success: function(response) {
+                const citySelect = $('#cities');
+                citySelect.empty();
+                response.forEach(function(city) {
+                    citySelect.append(`<option value="${city.id}">${city.name}</option>`);
+                });
+            },
+            error: function() {
+                console.error('Failed to load cities');
+            }
+        });
+    });
+
+    // Form submission
+    $('#editSubAdminForm').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const submitBtn = $('#editSubAdminSubmit');
+        
+        // Clear previous errors
+        form.find('.is-invalid').removeClass('is-invalid');
+        form.find('.invalid-feedback').text('');
+        
+        setButtonLoading(submitBtn, true);
+        
+        $.ajax({
+            url: '{% url "sub_admin_edit" sub_admin.id %}',
+            type: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    if (response.redirect_url) {
+                        window.location.href = response.redirect_url;
+                    }
+                } else {
+                    // Display form errors
+                    if (response.errors) {
+                        for (const field in response.errors) {
+                            const errorMsg = response.errors[field].join(' ');
+                            // Special handling for password fields
+                            if (field === 'password' || field === 'confirm_password') {
+                                $(`#${field}`).closest('.input-group').find('input').addClass('is-invalid');
+                                $(`#${field}-error`).text(errorMsg);
+                            } else {
+                                $(`#${field}`).addClass('is-invalid');
+                                $(`#${field}-error`).text(errorMsg);
+                            }
+                        }
+                    }
+                }
+            },
+            error: function(xhr) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.errors) {
+                        for (const field in response.errors) {
+                            const errorMsg = response.errors[field].join(' ');
+                            // Special handling for password fields
+                            if (field === 'password' || field === 'confirm_password') {
+                                $(`#${field}`).closest('.input-group').find('input').addClass('is-invalid');
+                                $(`#${field}-error`).text(errorMsg);
+                            } else {
+                                $(`#${field}`).addClass('is-invalid');
+                                $(`#${field}-error`).text(errorMsg);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('An error occurred while processing your request');
+                }
+            },
+            complete: function() {
+                setButtonLoading(submitBtn, false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

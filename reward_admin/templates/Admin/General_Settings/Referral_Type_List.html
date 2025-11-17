@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}User Referral Type Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addReferralTypeModal">Add Referral Type</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Created At</th>
+                                        <th>Updated At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for referral_type in referral_types %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ referral_type.name }}</td>
+                                        <td>{{ referral_type.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ referral_type.updated_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editReferralTypeModal" 
+                                                            data-referral-type-id="{{ referral_type.id }}" 
+                                                            data-referral-type-name="{{ referral_type.name }}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteReferralTypeModal" data-referral-type-id="{{ referral_type.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Referral Type Modal -->
+        <div class="modal fade" id="addReferralTypeModal" tabindex="-1" aria-labelledby="addReferralTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addReferralTypeModalLabel">Add Referral Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'referral_type_create' %}" id="addReferralTypeForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="name" name="name" placeholder="Referral Type Name">
+                                    <div class="invalid-feedback" id="name-error"></div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Add Referral Type</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Referral Type Modal -->
+        <div class="modal fade" id="editReferralTypeModal" tabindex="-1" aria-labelledby="editReferralTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editReferralTypeModalLabel">Edit Referral Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editReferralTypeForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="referralTypeId" name="id">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="edit_name" name="name">
+                                    <div class="invalid-feedback" id="edit_name-error"></div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update Referral Type</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Referral Type Modal -->
+        <div class="modal fade" id="deleteReferralTypeModal" tabindex="-1" aria-labelledby="deleteReferralTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteReferralTypeModalLabel">Delete Referral Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="deleteReferralTypeForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="referral_type_id" name="id">
+                            <p>Are you sure you want to delete this referral type? This action cannot be undone.</p>
+                            <button type="submit" class="btn btn-danger">Delete Referral Type</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script>
+    $(document).ready(function() {
+        // Function to validate form fields
+        function validateForm(form) {
+            let isValid = true;
+            
+            // Validate Name
+            const nameInput = form.find('#name, #edit_name');
+            const nameError = form.find('#name-error, #edit_name-error');
+            if (nameInput.val().trim() === '') {
+                nameInput.addClass('is-invalid');
+                nameError.text('Referral type name is required.');
+                isValid = false;
+            } else {
+                nameInput.removeClass('is-invalid');
+                nameError.text('');
+            }
+            
+            return isValid;
+        }
+
+        // Add Referral Type Form Validation
+        $('#addReferralTypeForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Edit Referral Type Form Validation
+        $('#editReferralTypeForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Clear validation errors when modal is closed
+        $('.modal').on('hidden.bs.modal', function() {
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            $(this).find('.invalid-feedback').text('');
+            $(this).find('form')[0].reset();
+        });
+
+        // Clear validation when user starts typing
+        $('#name, #edit_name').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').text('');
+        });
+
+        // Edit Referral Type Modal initialization
+        $('#editReferralTypeModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var referralTypeId = button.data('referral-type-id');
+            var name = button.data('referral-type-name');
+            
+            var form = $('#editReferralTypeForm');
+            form.attr('action', "{% url 'referral_type_edit' 0 %}".replace("0", referralTypeId));
+            form.find('#referralTypeId').val(referralTypeId);
+            form.find('#edit_name').val(name || "");
+        });
+
+        // Delete Referral Type Modal
+        $('#deleteReferralTypeModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var referralTypeId = button.data('referral-type-id');
+            $('#deleteReferralTypeForm').attr('action', "{% url 'referral_type_delete' 0 %}".replace('0', referralTypeId));
+        });
+
+        // Toggle action menu
+        $(document).on('click', '.three-dots-menu', function(e) {
+            e.preventDefault();
+            var actionCard = $(this).next('.action-card');
+            $('.action-card').not(actionCard).hide();
+            actionCard.toggle();
+        });
+
+        // Hide action card if clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.action-menu-container').length) {
+                $('.action-card').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}

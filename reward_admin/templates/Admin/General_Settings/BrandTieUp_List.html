@@ -1,0 +1,707 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Add this to your base template's head section -->
+<!-- Color Picker CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.css">
+<!-- Plugins css Ends-->
+<style>
+    /* Enhanced Color picker styles */
+    .colorpicker .input-group-text {
+        cursor: pointer;
+        width: 40px;
+        justify-content: center;
+        border: 1px solid #ced4da;
+        border-left: none;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+
+    .colorpicker .input-group-text:hover {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    /* Color picker preview square */
+    .colorpicker .fa-square {
+        transition: all 0.3s;
+        font-size: 18px;
+        border: 1px solid #dee2e6;
+        border-radius: 2px;
+    }
+
+    /* Color input field styling */
+    .colorpicker .form-control {
+        border-right: none;
+        text-transform: uppercase;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-weight: 500;
+    }
+
+    .colorpicker .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    /* Custom color palette */
+    .color-palette {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .color-palette-item {
+        width: 30px;
+        height: 30px;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .color-palette-item:hover {
+        transform: scale(1.1);
+        border-color: #495057;
+    }
+
+    .color-palette-item.selected {
+        border-color: #0d6efd;
+        transform: scale(1.15);
+        box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+    }
+
+    /* Spectrum color picker customization */
+    .sp-container {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .sp-replacer {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background: #fff;
+        width: 100%;
+        height: 38px;
+        padding: 0;
+    }
+
+    .sp-preview {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 4px;
+    }
+
+    .sp-dd {
+        display: none;
+    }
+
+    /* Brand logo styles */
+    .brand-logo {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Color preview in table */
+    .color-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        border: 1px solid #dee2e6;
+    }
+    
+    /* Image preview styles */
+    .image-preview-container {
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        max-height: 200px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 5px;
+        margin-bottom: 10px;
+    }
+
+    .no-image {
+        padding: 20px;
+        background-color: #f8f9fa;
+        border: 1px dashed #dee2e6;
+        border-radius: 4px;
+        text-align: center;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Brand Tie-Up Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <h3>{{ breadcrumb.child }}</h3>
+                </div>
+                <div class="col-12 col-md-6 text-end">
+                    <button class="btn btn-pill btn-outline-primary-2x" data-bs-toggle="modal" data-bs-target="#addBrandModal">Add Brand</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Brand List -->
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Logo</th>
+                                        <th>Name</th>
+                                        <th>Offer</th>
+                                        <th>Color</th>
+                                        <th>Created</th>
+                                        <th>Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody> {% for brand in brands %} <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td> {% if brand.image %} <img src="{{ brand.image.url }}" alt="{{ brand.name }}" class="brand-logo"> {% else %} <span class="badge bg-secondary">No Image</span> {% endif %} </td>
+                                        <td>{{ brand.name }}</td>
+                                        <td>{{ brand.offer|default:"-" }}</td>
+                                        <td> {% if brand.color %} <div style="display:flex;align-items:center;gap:6px;">
+                                                <div class="color-preview" style="background: {{ brand.color }}"></div>
+                                                <span>{{ brand.color }}</span>
+                                            </div> {% else %} <span class="badge bg-secondary">Not set</span> {% endif %} </td>
+                                        <td>{{ brand.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ brand.updated_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position:relative;display:inline-block;">
+                                                <a href="#" class="three-dots-menu" onclick="toggleMenu(this)">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0px 4px 8px rgba(0,0,0,0.1);z-index:10;">
+                                                    <ul style="list-style:none;padding:0;margin:0;">
+                                                        <li style="padding:8px 12px;">
+                                                            <a href="#" style="font-size:small;" data-bs-toggle="modal" data-bs-target="#editBrandModal" data-id="{{ brand.id }}" data-name="{{ brand.name }}" data-offer="{{ brand.offer }}" data-color="{{ brand.color|default:'#3B82F6' }}" data-image-url="{% if brand.image %}{{ brand.image.url }}{% endif %}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding:8px 12px;">
+                                                            <a href="#" style="font-size:small;" data-bs-toggle="modal" data-bs-target="#deleteBrandModal" data-id="{{ brand.id }}" data-name="{{ brand.name }}"> Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr> {% endfor %} </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Add Brand Modal -->
+<div class="modal fade" id="addBrandModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data" action="{% url 'brand_tie_up_create' %}" id="addBrandForm"> {% csrf_token %} <div class="modal-header">
+                    <h5 class="modal-title">Add Brand</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Name *</label>
+                        <input type="text" name="name" class="form-control">
+                        <div class="invalid-feedback" id="name-error"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Offer</label>
+                        <textarea name="offer" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Logo *</label>
+                        <input type="file" name="image" accept="image/*" class="form-control">
+                        <div class="invalid-feedback" id="image-error"></div>
+                        <small class="form-text text-muted">Only image files are allowed.</small>
+                        <!-- Image Preview -->
+                        <div class="image-preview-container" id="addImagePreview">
+                            <div class="no-image">No image selected</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Color</label>
+                        <input type="text" id="brandColor" name="color" class="form-control" value="#3B82F6">
+                        <!-- Color Palette -->
+                        <div class="color-palette" id="addColorPalette">
+                            <div class="color-palette-item" data-color="#EF4444" style="background-color: #EF4444;" title="Red"></div>
+                            <div class="color-palette-item" data-color="#F97316" style="background-color: #F97316;" title="Orange"></div>
+                            <div class="color-palette-item" data-color="#EAB308" style="background-color: #EAB308;" title="Yellow"></div>
+                            <div class="color-palette-item" data-color="#22C55E" style="background-color: #22C55E;" title="Green"></div>
+                            <div class="color-palette-item" data-color="#06B6D4" style="background-color: #06B6D4;" title="Cyan"></div>
+                            <div class="color-palette-item selected" data-color="#3B82F6" style="background-color: #3B82F6;" title="Blue"></div>
+                            <div class="color-palette-item" data-color="#8B5CF6" style="background-color: #8B5CF6;" title="Purple"></div>
+                            <div class="color-palette-item" data-color="#EC4899" style="background-color: #EC4899;" title="Pink"></div>
+                            <div class="color-palette-item" data-color="#6B7280" style="background-color: #6B7280;" title="Gray"></div>
+                            <div class="color-palette-item" data-color="#1F2937" style="background-color: #1F2937;" title="Dark"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Edit Brand Modal -->
+<div class="modal fade" id="editBrandModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data" id="editBrandForm"> {% csrf_token %} <div class="modal-header">
+                    <h5 class="modal-title">Edit Brand</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <input type="hidden" id="editBrandId" name="id">
+                    <div class="col-12">
+                        <label class="form-label">Name *</label>
+                        <input type="text" name="name" id="editBrandName" class="form-control">
+                        <div class="invalid-feedback" id="edit-name-error"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Offer</label>
+                        <textarea name="offer" id="editBrandOffer" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Logo (Upload new if needed)</label>
+                        <input type="file" name="image" accept="image/*" class="form-control">
+                        <small class="form-text text-muted">Leave empty to keep current image. Only image files are allowed.</small>
+                        <!-- Image Preview -->
+                        <div class="image-preview-container" id="editImagePreview">
+                            <div class="no-image">No image available</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Color</label>
+                        <input type="text" id="editBrandColor" name="color" class="form-control" value="#3B82F6">
+                        <!-- Color Palette -->
+                        <div class="color-palette" id="editColorPalette">
+                            <div class="color-palette-item" data-color="#EF4444" style="background-color: #EF4444;" title="Red"></div>
+                            <div class="color-palette-item" data-color="#F97316" style="background-color: #F97316;" title="Orange"></div>
+                            <div class="color-palette-item" data-color="#EAB308" style="background-color: #EAB308;" title="Yellow"></div>
+                            <div class="color-palette-item" data-color="#22C55E" style="background-color: #22C55E;" title="Green"></div>
+                            <div class="color-palette-item" data-color="#06B6D4" style="background-color: #06B6D4;" title="Cyan"></div>
+                            <div class="color-palette-item" data-color="#3B82F6" style="background-color: #3B82F6;" title="Blue"></div>
+                            <div class="color-palette-item" data-color="#8B5CF6" style="background-color: #8B5CF6;" title="Purple"></div>
+                            <div class="color-palette-item" data-color="#EC4899" style="background-color: #EC4899;" title="Pink"></div>
+                            <div class="color-palette-item" data-color="#6B7280" style="background-color: #6B7280;" title="Gray"></div>
+                            <div class="color-palette-item" data-color="#1F2937" style="background-color: #1F2937;" title="Dark"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteBrandModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" id="deleteBrandForm"> {% csrf_token %} <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this brand? This action cannot be undone.</p>
+                    <input type="hidden" id="deleteBrandId" name="id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.1/spectrum.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Action menu toggle
+    document.querySelectorAll('.three-dots-menu').forEach(menu => {
+        menu.addEventListener('click', function(e) {
+            e.preventDefault();
+            let card = this.nextElementSibling;
+            card.style.display = card.style.display === 'block' ? 'none' : 'block';
+            document.querySelectorAll('.action-card').forEach(c => { if(c!==card) c.style.display='none'; });
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if(!e.target.closest('.action-menu-container')) {
+            document.querySelectorAll('.action-card').forEach(c => c.style.display='none');
+        }
+    });
+
+    // Clear validation errors when modals are closed
+    document.getElementById('addBrandModal').addEventListener('hidden.bs.modal', function() {
+        clearFormErrors('addBrandForm');
+        resetImagePreview('addImagePreview');
+    });
+
+    document.getElementById('editBrandModal').addEventListener('hidden.bs.modal', function() {
+        clearFormErrors('editBrandForm');
+    });
+
+    document.getElementById('deleteBrandModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('deleteBrandId').value = '';
+    });
+
+    // Initialize enhanced color pickers
+    initColorPickers();
+    
+    // Initialize image preview functionality
+    initImagePreviews();
+
+    // Form validation
+    function validateForm(form) {
+        let isValid = true;
+        const nameField = form.querySelector('[name="name"]');
+        const nameError = form.querySelector('#name-error') || form.querySelector('#edit-name-error');
+        
+        // Clear previous errors
+        nameField.classList.remove('is-invalid');
+        if (nameError) nameError.textContent = '';
+        
+        // Validate name
+        if (!nameField.value.trim()) {
+            nameField.classList.add('is-invalid');
+            if (nameError) nameError.textContent = 'Brand name is required.';
+            isValid = false;
+        }
+        
+        // For add form, validate image
+        if (form.id === 'addBrandForm') {
+            const imageField = form.querySelector('[name="image"]');
+            const imageError = form.querySelector('#image-error');
+            
+            imageField.classList.remove('is-invalid');
+            if (imageError) imageError.textContent = '';
+            
+            if (!imageField.files || imageField.files.length === 0) {
+                imageField.classList.add('is-invalid');
+                if (imageError) imageError.textContent = 'Image is required.';
+                isValid = false;
+            } else if (!imageField.files[0].type.startsWith('image/')) {
+                imageField.classList.add('is-invalid');
+                if (imageError) imageError.textContent = 'Only image files are allowed.';
+                isValid = false;
+            }
+        }
+        
+        return isValid;
+    }
+
+    // Add form submission with validation
+    document.getElementById('addBrandForm').addEventListener('submit', function(e) {
+        if (!validateForm(this)) {
+            e.preventDefault();
+            const firstInvalid = this.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+
+    // Edit form submission with validation
+    document.getElementById('editBrandForm').addEventListener('submit', function(e) {
+        if (!validateForm(this)) {
+            e.preventDefault();
+            const firstInvalid = this.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+
+    // Real-time validation on input
+    document.querySelectorAll('[name="name"]').forEach(field => {
+        field.addEventListener('input', function() {
+            const errorId = this.id.includes('edit') ? 'edit-name-error' : 'name-error';
+            const errorElement = document.getElementById(errorId);
+            
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+                if (errorElement) errorElement.textContent = '';
+            }
+        });
+    });
+    
+    // Image validation on change
+    document.querySelectorAll('[name="image"]').forEach(field => {
+        field.addEventListener('change', function() {
+            const errorId = this.id.includes('edit') ? 'edit-image-error' : 'image-error';
+            const errorElement = document.getElementById(errorId);
+            
+            if (errorElement) errorElement.textContent = '';
+            this.classList.remove('is-invalid');
+            
+            if (this.files && this.files.length > 0 && !this.files[0].type.startsWith('image/')) {
+                this.classList.add('is-invalid');
+                if (errorElement) errorElement.textContent = 'Only image files are allowed.';
+            }
+        });
+    });
+
+    // Load edit modal data
+    var editModal = document.getElementById('editBrandModal');
+    editModal.addEventListener('show.bs.modal', function(event) {
+        var btn = event.relatedTarget;
+        var id = btn.getAttribute('data-id');
+        var name = btn.getAttribute('data-name');
+        var offer = btn.getAttribute('data-offer');
+        var color = btn.getAttribute('data-color');
+        var imageUrl = btn.getAttribute('data-image-url');
+
+        document.getElementById('editBrandId').value = id;
+        document.getElementById('editBrandName').value = name;
+        document.getElementById('editBrandOffer').value = offer || '';
+        document.getElementById('editBrandColor').value = color || '#3B82F6';
+        
+        // Update color picker
+        updateColorPicker('editBrandColor', color || '#3B82F6');
+        updatePaletteSelection('editColorPalette', color || '#3B82F6');
+        
+        // Update image preview
+        var previewContainer = document.getElementById('editImagePreview');
+        if (imageUrl) {
+            previewContainer.innerHTML = '<img src="' + imageUrl + '" alt="Current Image" class="image-preview">';
+        } else {
+            previewContainer.innerHTML = '<div class="no-image">No image available</div>';
+        }
+
+        // Set form action
+        document.getElementById('editBrandForm').action = "{% url 'brand_tie_up_edit' 0 %}".replace('0', id);
+    });
+
+    // Load delete modal data
+    var deleteModal = document.getElementById('deleteBrandModal');
+    deleteModal.addEventListener('show.bs.modal', function(event) {
+        var btn = event.relatedTarget;
+        var id = btn.getAttribute('data-id');
+        var name = btn.getAttribute('data-name');
+
+        document.getElementById('deleteBrandId').value = id;
+        
+        // Update the confirmation message with the brand name
+        var messageElement = deleteModal.querySelector('.modal-body p');
+        messageElement.textContent = 'Are you sure you want to delete the brand "' + name + '"? This action cannot be undone.';
+        
+        // Set form action
+        document.getElementById('deleteBrandForm').action = "{% url 'brand_tie_up_delete' 0 %}".replace('0', id);
+    });
+
+    // Function to clear form errors
+    function clearFormErrors(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            const errorFields = form.querySelectorAll('.is-invalid');
+            errorFields.forEach(field => {
+                field.classList.remove('is-invalid');
+            });
+            
+            const errorMessages = form.querySelectorAll('.invalid-feedback');
+            errorMessages.forEach(message => {
+                message.textContent = '';
+            });
+        }
+    }
+
+    // Function to reset image preview
+    function resetImagePreview(previewId) {
+        const previewContainer = document.getElementById(previewId);
+        if (previewContainer) {
+            previewContainer.innerHTML = '<div class="no-image">No image selected</div>';
+        }
+        
+        // Also reset the file input
+        const fileInput = document.querySelector(`#${previewId.replace('Preview', '')} input[type="file"]`);
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    }
+});
+
+// Initialize enhanced color pickers
+function initColorPickers() {
+    // Initialize Spectrum color picker for add modal
+    $('#brandColor').spectrum({
+        type: "component",
+        showInput: true,
+        showInitial: true,
+        showPalette: false,
+        showButtons: true,
+        allowEmpty: false,
+        preferredFormat: "hex",
+        cancelText: "Cancel",
+        chooseText: "Select",
+        change: function(color) {
+            const hexColor = color.toHexString().toUpperCase();
+            $('#brandColor').val(hexColor);
+            updatePaletteSelection('addColorPalette', hexColor);
+        }
+    });
+
+    // Initialize Spectrum color picker for edit modal
+    $('#editBrandColor').spectrum({
+        type: "component",
+        showInput: true,
+        showInitial: true,
+        showPalette: false,
+        showButtons: true,
+        allowEmpty: false,
+        preferredFormat: "hex",
+        cancelText: "Cancel",
+        chooseText: "Select",
+        change: function(color) {
+            const hexColor = color.toHexString().toUpperCase();
+            $('#editBrandColor').val(hexColor);
+            updatePaletteSelection('editColorPalette', hexColor);
+        }
+    });
+
+    // Initialize color palette functionality
+    initColorPalette('addColorPalette', 'brandColor');
+    initColorPalette('editColorPalette', 'editBrandColor');
+
+    // Manual input validation and formatting
+    $('#brandColor, #editBrandColor').on('input', function() {
+        let value = $(this).val();
+        if (value && !value.startsWith('#')) {
+            value = '#' + value;
+        }
+        if (isValidHexColor(value)) {
+            $(this).val(value.toUpperCase());
+            $(this).spectrum('set', value);
+            const paletteId = $(this).attr('id') === 'brandColor' ? 'addColorPalette' : 'editColorPalette';
+            updatePaletteSelection(paletteId, value);
+        }
+    });
+}
+
+// Initialize image preview functionality
+function initImagePreviews() {
+    // Add form image preview
+    document.getElementById('addBrandForm').querySelector('[name="image"]').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const previewContainer = document.getElementById('addImagePreview');
+        
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewContainer.innerHTML = '<img src="' + e.target.result + '" alt="Image Preview" class="image-preview">';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewContainer.innerHTML = '<div class="no-image">No image selected</div>';
+        }
+    });
+    
+    // Edit form image preview
+    document.getElementById('editBrandForm').querySelector('[name="image"]').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const previewContainer = document.getElementById('editImagePreview');
+        
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewContainer.innerHTML = '<img src="' + e.target.result + '" alt="Image Preview" class="image-preview">';
+            };
+            reader.readAsDataURL(file);
+        } else if (!file) {
+            // If no file selected, show the current image again
+            const currentImg = previewContainer.querySelector('img');
+            if (!currentImg) {
+                previewContainer.innerHTML = '<div class="no-image">No image available</div>';
+            }
+        }
+    });
+}
+
+// Initialize color palette functionality
+function initColorPalette(paletteId, inputId) {
+    const palette = document.getElementById(paletteId);
+    const input = document.getElementById(inputId);
+    
+    if (palette && input) {
+        const colorItems = palette.querySelectorAll('.color-palette-item');
+        
+        colorItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const color = this.getAttribute('data-color');
+                input.value = color;
+                $('#' + inputId).spectrum('set', color);
+                updatePaletteSelection(paletteId, color);
+            });
+        });
+    }
+}
+
+// Update palette selection
+function updatePaletteSelection(paletteId, selectedColor) {
+    const palette = document.getElementById(paletteId);
+    if (palette) {
+        const colorItems = palette.querySelectorAll('.color-palette-item');
+        colorItems.forEach(item => {
+            if (item.getAttribute('data-color').toLowerCase() === selectedColor.toLowerCase()) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+}
+
+// Update color picker value
+function updateColorPicker(inputId, color) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = color;
+        $('#' + inputId).spectrum('set', color);
+    }
+}
+
+// Validate hex color
+function isValidHexColor(hex) {
+    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
+}
+</script>
+{% endblock %}

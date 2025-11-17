@@ -1,0 +1,120 @@
+{% load static %} {% load sass_tags %}
+{% load custom_filters %}
+{% load permission_tags %}
+
+<!DOCTYPE html>
+<html lang="en" dir="{{layout}}">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="icon" href="{{ fav_icon }}" type="image/x-icon">
+		<link rel="shortcut icon" href="{{ fav_icon }}" type="image/x-icon">
+		<title>{% block title %} {% endblock %}</title>
+		<!-- Google font-->
+		<link href="https://fonts.googleapis.com/css?family=Rubik:400,400i,500,500i,700,700i&amp;display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,500,500i,700,700i,900&amp;display=swap" rel="stylesheet">
+		<link rel="stylesheet" type="text/css" href="{% static 'assets/css/font-awesome.css'%}">
+		<!-- ico-font-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/icofont.scss'%}">
+		<!-- Themify icon-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/themify.scss'%}">
+		<!-- Flag icon-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/flag-icon.scss'%}">
+		<!-- Feather icon-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/feather-icon.scss'%}">
+		<!-- Plugins css start-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/slick.scss'%}">
+		<link rel="stylesheet" type="text/css" href="{% static 'assets/css/vendors/slick-theme.css'%}">
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/scrollbar.scss'%}">
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/animate.scss'%}">
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.css'%}"> 
+    {% block css %} {% endblock %}
+		<!-- Plugins css Ends-->
+		<!-- Bootstrap css-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/bootstrap.scss' %}" />
+		<!-- App css-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/style.scss' %}" />
+		<link id="color" rel="stylesheet" href="{% sass_src 'assets/scss/color-1.scss' %}" media="screen" />
+		<!-- Responsive css-->
+		<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/responsive.scss' %}" />
+	</head>
+	<body class="{{layouts}}" onload="{{jsFunction}}">
+		<!-- loader starts-->
+		<div class="loader-wrapper">
+			<img src="{% static 'logo.gif' %}" alt="Loading..." />
+		</div>
+		<!-- loader ends-->
+		<!-- tap on top starts-->
+		<div class="tap-top">
+			<i data-feather="chevrons-up"></i>
+		</div>
+		<!-- tap on tap ends-->
+		<!-- page-wrapper Start-->
+		<div class="page-wrapper compact-wrapper" id="pageWrapper"> 
+      {% include "layouts/header.html" %}
+			<!-- Page Body Start-->
+			<div class="page-body-wrapper"> 
+        {% include "layouts/sidebar.html" %} 
+        {% block content %} {% endblock %} 
+        {% include "layouts/footer.html" %} 
+      </div>
+		</div>
+		<!-- latest jquery-->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<!-- Bootstrap js-->
+		<script src="{% static 'assets/js/bootstrap/bootstrap.bundle.min.js'%}"></script>
+		<!-- feather icon js-->
+		<script src="{% static 'assets/js/icons/feather-icon/feather.min.js'%}"></script>
+		<script src="{% static 'assets/js/icons/feather-icon/feather-icon.js'%}"></script>
+		<!-- scrollbar js-->
+		<script src="{% static 'assets/js/scrollbar/simplebar.js'%}"></script>
+		<script src="{% static 'assets/js/scrollbar/custom.js'%}"></script>
+		<!-- Sidebar jquery-->
+		<script src="{% static 'assets/js/config.js'%}"></script>
+		<!-- Plugins JS start-->
+		<script src="{% static 'assets/js/sidebar-menu.js' %}"></script>
+		<script src="{% static 'assets/js/slick/slick.min.js' %}"></script>
+		<script src="{% static 'assets/js/slick/slick.js' %}"></script>
+		<script src="{% static 'assets/js/header-slick.js' %}"></script>
+    {% block scriptcontent %}
+    {% endblock %}
+		<!-- Plugins JS Ends-->
+		<!-- Theme js-->
+		<script src="{% static 'assets/js/script.js'%}"></script>
+		<!-- login js-->
+
+    {% if messages %} 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+		<script>
+		document.addEventListener('DOMContentLoaded', function () {
+      {% for message in messages %}
+          Swal.fire({
+              icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% elif message.tags == "info" %}info{% else %}info{% endif %}',
+              text: "{{ message|escapejs|safe }}",
+              background: '{% if message.tags == "error" %}#f8d7da{% elif message.tags == "success" %}#d4edda{% elif message.tags == "warning" %}#fff3cd{% elif message.tags == "info" %}#d1ecf1{% else %}#e2e3e5{% endif %}',
+              iconColor: '{% if message.tags == "error" %}#842029{% elif message.tags == "success" %}#0f5132{% elif message.tags == "warning" %}#664d03{% elif message.tags == "info" %}#055160{% else %}#41464b{% endif %}',
+              customClass: {
+                  popup: 'alert alert-dismissible fade show',
+                  title: 'alert-heading',
+                  content: 'alert-text',
+              },
+              position: 'top-end',
+              toast: true,
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+              showCloseButton: true,
+              didOpen: (toast) => {
+                  toast.addEventListener('mouseenter', Swal.stopTimer)
+                  toast.addEventListener('mouseleave', Swal.resumeTimer)
+              }
+          });
+      {% endfor %}
+    });
+	</script>
+  {% endif %} 
+  {% block script %} 
+  {% endblock %}
+	</body>
+</html>

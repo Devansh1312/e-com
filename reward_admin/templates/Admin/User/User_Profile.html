@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% block title %}User Profile{% endblock %}
+{% load permission_tags %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<div class="page-body" style="padding-top: 30px;">
+    <div class="container-fluid">
+        <div class="user-profile">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card hovercard text-center overflow-hidden">
+                        <div class="cardheader">
+                            {% if user.card_header %}
+                                <img alt="Card Header" src="{{ user.card_header.url }}" class="card-header-img">
+                            {% else %}
+                                <img alt="Default Card Header" src="{{  website_logo  }}" class="card-header-img">
+                            {% endif %}
+                        </div>
+                        <div class="user-image">
+                            <div class="avatar">
+                                {% if user.profile_picture %}
+                                    <img alt="Profile Picture" src="{{ user.profile_picture.url }}" class="profile-pic-img">
+                                {% else %}
+                                    <img alt="Default Profile Picture" src="{% static 'assets/images/dashboard/User.png' %}" class="profile-pic-img">
+                                {% endif %}
+                            </div>
+                            {% if request.user|has_permission:'edit_profile' %}
+                                <a href="{% url 'edit_profile' %}" class="icon-wrapper">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="info">
+                            <div class="user-designation text-center mb-4">
+                                <div class="title"><h3>{{ user.name }}</h3></div>
+                                <div class="desc text-muted">{{ user.role.name|default:"No Role" }}</div>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <!-- Personal Information Column -->
+                                <div class="col-12 col-lg-4">
+                                    <div class="card mb-3 h-100">
+                                        <div class="card-header">
+                                            <h5><i class="fas fa-user me-2"></i> Personal Information</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-user me-2"></i> First Name</h6>
+                                                        <span>{{ user.first_name|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-user me-2"></i> Last Name</h6>
+                                                        <span>{{ user.last_name|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-venus-mars me-2"></i> Gender</h6>
+                                                        <span>{{ user.gender|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contact Information Column -->
+                                <div class="col-12 col-lg-4">
+                                    <div class="card mb-3 h-100">
+                                        <div class="card-header">
+                                            <h5><i class="fas fa-address-book me-2"></i> Contact Information</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-envelope me-2"></i> Email</h6>
+                                                        <span class="text-break">{{ user.email|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-phone me-2"></i> Phone</h6>
+                                                        <span>{{ user.phone|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-user-circle me-2"></i> Username</h6>
+                                                        <span>{{ user.username }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Location Information Column -->
+                                <div class="col-12 col-lg-4">
+                                    <div class="card mb-3 h-100">
+                                        <div class="card-header">
+                                            <h5><i class="fas fa-map-marker-alt me-2"></i> Location Information</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-globe me-2"></i> Country</h6>
+                                                        <span>{{ user.country|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-map me-2"></i> State</h6>
+                                                        <span>{{ user.state|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-city me-2"></i> Cities</h6>
+                                                        <span>
+                                                            {% if user.cities.all %}
+                                                                {% for city in user.cities.all %}
+                                                                    {{ city }}{% if not forloop.last %}, {% endif %}
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                Not specified
+                                                            {% endif %}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Information -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5><i class="fas fa-info-circle me-2"></i> Additional Information</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-4">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-calendar-alt me-2"></i> Member Since</h6>
+                                                        <span>{{ user.created_at|date:"F d, Y" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-sync-alt me-2"></i> Last Updated</h6>
+                                                        <span>{{ user.updated_at|date:"F d, Y" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-bell me-2"></i> Notifications</h6>
+                                                        <span>
+                                                            {% if user.is_notification %}
+                                                                <span class="badge bg-success">
+                                                                    <i class="fas fa-check me-1"></i>Enabled
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">
+                                                                    <i class="fas fa-times me-1"></i>Disabled
+                                                                </span>
+                                                            {% endif %}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Card Header Image Styling */
+.card-header-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Profile Picture Styling */
+.profile-pic-img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.user-image {
+    position: relative;
+}
+
+.user-image .avatar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: -75px;
+    margin-bottom: 20px;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease;
+    border: 1px solid #e3e6f0;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: #495057;
+    font-weight: 600;
+}
+
+.ttl-info {
+    margin-bottom: 1rem;
+}
+
+.ttl-info h6 {
+    color: #6c757d;
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.ttl-info span {
+    font-weight: 500;
+    color: #212529;
+    display: block;
+}
+
+.user-designation .title h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 5px;
+}
+
+.user-designation .desc {
+    font-size: 16px;
+    color: #7366ff;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 1199.98px) {
+    .card-header-img {
+        height: 250px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .card-header-img {
+        height: 220px;
+    }
+    
+    .profile-pic-img {
+        width: 130px;
+        height: 130px;
+    }
+    
+    .user-image .avatar {
+        margin-top: -65px;
+    }
+    
+}
+
+@media (max-width: 767.98px) {
+    .card-header-img {
+        height: 200px;
+    }
+    
+    .profile-pic-img {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .user-image .avatar {
+        margin-top: -60px;
+    }
+    
+    .user-designation .title h3 {
+        font-size: 24px;
+    }
+    
+    .card-header h5 {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-body {
+        padding-top: 20px !important;
+    }
+    
+    .card-header-img {
+        height: 180px;
+    }
+    
+    .profile-pic-img {
+        width: 100px;
+        height: 100px;
+        border: 3px solid white;
+    }
+    
+    .user-image .avatar {
+        margin-top: -50px;
+        margin-bottom: 15px;
+    }
+    
+    .user-designation .title h3 {
+        font-size: 20px;
+    }
+    
+    .user-designation .desc {
+        font-size: 14px;
+    }
+    
+    .card-header {
+        padding: 12px 15px;
+    }
+    
+    .card-header h5 {
+        font-size: 15px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .ttl-info h6 {
+        font-size: 13px;
+    }
+    
+    .ttl-info span {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 379.98px) {
+    .card-header-img {
+        height: 150px;
+    }
+    
+    .profile-pic-img {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .user-image .avatar {
+        margin-top: -40px;
+    }
+    
+    
+    .user-designation .title h3 {
+        font-size: 18px;
+    }
+}
+
+/* Utility classes for better spacing */
+.h-100 {
+    height: 100% !important;
+}
+
+.text-break {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Custom Bootstrap grid gutters */
+.g-3 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+}
+
+@media (max-width: 575.98px) {
+    .g-3 {
+        --bs-gutter-x: 0.75rem;
+        --bs-gutter-y: 0.75rem;
+    }
+}
+</style>
+
+{% endblock %}

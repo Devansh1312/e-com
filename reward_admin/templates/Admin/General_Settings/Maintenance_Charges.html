@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends-->
+{% endblock %}
+
+<style>
+    .is-invalid {
+        border-color: #dc3545;
+        background-color: #f8d7da;
+    }
+    .duration-badge {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+    }
+    .benefit-item {
+        margin-bottom: 5px;
+    }
+    .benefit-actions {
+        margin-left: 10px;
+    }
+</style>
+
+{% block title %}Maintenance Charges{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addPlanModal">Add Maintenance Charge</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Maintenance Charges List -->
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Duration</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for charge in charges %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ charge.name }}</td>
+                                        <td>
+                                            {% if charge.duration == 1 %}
+                                            <span class="badge duration-badge badge-monthly" style="background-color: #007bff !important; color: #fff;">
+                                            {% elif charge.duration == 2 %}
+                                            <span class="badge duration-badge badge-annual" style="background-color: #28a745 !important; color: #fff;">
+                                            {% else %}
+                                            <span class="badge duration-badge badge-warning" style="background-color: #ffc107 !important; color: #000;">
+                                            {% endif %}
+                                            {{ charge.get_duration_display }}
+                                            </span>
+                                        </td>
+                                        <td>₹ {{ charge.price }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if charge.is_active %}success{% else %}danger{% endif %}">
+                                                {% if charge.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu" onclick="toggleMenu(this)">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="
+                                                    display: none;
+                                                    position: absolute;
+                                                    top: 100%;
+                                                    right: 0;
+                                                    background: #fff;
+                                                    border: 1px solid #ccc;
+                                                    border-radius: 4px;
+                                                    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                                                    z-index: 10;
+                                                    width: auto;
+                                                ">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editPlanModal" 
+                                                            data-charge-id="{{ charge.id }}" 
+                                                            data-charge-name="{{ charge.name }}" 
+                                                            data-charge-price="{{ charge.price }}"
+                                                            data-charge-duration="{{ charge.duration }}"
+                                                            data-charge-is_active="{% if charge.is_active %}true{% else %}false{% endif %}"
+                                                            data-benefits='[{% for benefit in charge.benefits.all %}{"id":{{ benefit.id }},"name":"{{ benefit.name|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deletePlanModal" data-charge-id="{{ charge.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Add Maintenance Charge Modal -->
+        <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addPlanModalLabel">Add Maintenance Charge</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'maintenance_charge_create' %}" id="addPlanForm"> 
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="name" name="name">
+                                    <div class="invalid-feedback" id="name-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="price" class="form-label">Price*</label>
+                                    <input type="number" step="0.01" class="form-control" id="price" name="price">
+                                    <div class="invalid-feedback" id="price-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="duration" class="form-label">Duration*</label>
+                                    <select class="form-control" id="duration" name="duration">
+                                        <option value="1">Monthly</option>
+                                        <option value="2">Annual</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Benefits</label>
+                                    <div id="benefits-container">
+                                        <div class="input-group benefit-item">
+                                            <input type="text" class="form-control" name="benefits[]" placeholder="Enter benefit">
+                                            <button type="button" class="btn btn-danger remove-benefit">Remove</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary mt-2" id="add-benefit">Add Another Benefit</button>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                        <label class="form-check-label" for="is_active">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Add Charge</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Edit Maintenance Charge Modal -->
+        <div class="modal fade" id="editPlanModal" tabindex="-1" aria-labelledby="editPlanModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editPlanModalLabel">Edit Maintenance Charge</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editPlanForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <input type="hidden" id="chargeId" name="id" />
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_name" class="form-label">Name*</label>
+                                    <input type="text" class="form-control" id="edit_name" name="name">
+                                    <div class="invalid-feedback" id="edit_name-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_price" class="form-label">Price*</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit_price" name="price">
+                                    <div class="invalid-feedback" id="edit_price-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_duration" class="form-label">Duration*</label>
+                                    <select class="form-control" id="edit_duration" name="duration">
+                                        <option value="1">Monthly</option>
+                                        <option value="2">Annual</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Benefits</label>
+                                    <div id="edit-benefits-container">
+                                        <!-- Existing benefits will be added here by JavaScript -->
+                                    </div>
+                                    <button type="button" class="btn btn-secondary mt-2" id="add-edit-benefit">Add Another Benefit</button>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+                                        <label class="form-check-label" for="edit_is_active">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update Charge</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Delete Maintenance Charge Modal -->
+<div class="modal fade" id="deletePlanModal" tabindex="-1" aria-labelledby="deletePlanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deletePlanModalLabel">Delete Maintenance Charge</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form method="post" action="" id="deletePlanForm">
+            {% csrf_token %}
+            <input type="hidden" id="charge_id" name="id">
+            <p>Are you sure you want to delete this maintenance charge?</p>
+            <button type="submit" class="btn btn-danger">Delete Charge</button>
+          </form>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script src="{% static 'assets/js/tooltip-init.js'%}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Clear form data and errors when modals are closed
+    document.getElementById('addPlanModal').addEventListener('hidden.bs.modal', function() {
+        clearFormErrors('addPlanForm');
+        resetFormData('addPlanForm');
+        resetBenefitsContainer('benefits-container');
+    });
+
+    document.getElementById('editPlanModal').addEventListener('hidden.bs.modal', function() {
+        clearFormErrors('editPlanForm');
+        resetBenefitsContainer('edit-benefits-container');
+    });
+
+    document.getElementById('deletePlanModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('charge_id').value = '';
+    });
+
+    // Benefit management for add form
+    const benefitsContainer = document.getElementById('benefits-container');
+    const addBenefitBtn = document.getElementById('add-benefit');
+    
+    addBenefitBtn.addEventListener('click', function() {
+        const newBenefit = document.createElement('div');
+        newBenefit.className = 'input-group benefit-item mt-2';
+        newBenefit.innerHTML = `
+            <input type="text" class="form-control" name="benefits[]" placeholder="Enter benefit">
+            <button type="button" class="btn btn-danger remove-benefit">Remove</button>
+        `;
+        benefitsContainer.appendChild(newBenefit);
+    });
+    
+    benefitsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-benefit')) {
+            e.target.closest('.benefit-item').remove();
+        }
+    });
+    
+    // Benefit management for edit form
+    const editBenefitsContainer = document.getElementById('edit-benefits-container');
+    const addEditBenefitBtn = document.getElementById('add-edit-benefit');
+    
+    addEditBenefitBtn.addEventListener('click', function() {
+        const newBenefit = document.createElement('div');
+        newBenefit.className = 'input-group benefit-item mt-2';
+        newBenefit.innerHTML = `
+            <input type="text" class="form-control" name="benefits[]" placeholder="Enter benefit">
+            <button type="button" class="btn btn-danger remove-benefit">Remove</button>
+        `;
+        editBenefitsContainer.appendChild(newBenefit);
+    });
+    
+    editBenefitsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-benefit')) {
+            // Check if this is an existing benefit (has hidden input with benefit ID)
+            const benefitItem = e.target.closest('.benefit-item');
+            const hiddenInput = benefitItem.querySelector('input[name="existing_benefits_ids[]"]');
+            
+            if (hiddenInput && hiddenInput.value) {
+                // This is an existing benefit, delete it via AJAX
+                const benefitId = hiddenInput.value;
+                if (confirm('Are you sure you want to delete this benefit?')) {
+                    deleteBenefitAjax(benefitId, benefitItem);
+                }
+            } else {
+                // This is a new benefit, just remove from DOM
+                benefitItem.remove();
+            }
+        }
+    });
+    
+    // Function to delete benefit via AJAX
+    function deleteBenefitAjax(benefitId, benefitElement) {
+        $.ajax({
+            url: "{% url 'maintenance_charge_delete_benefit' %}",
+            method: 'POST',
+            data: {
+                benefit_id: benefitId,
+                csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    benefitElement.remove();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('An error occurred while deleting the benefit.');
+            }
+        });
+    }
+    
+    // Edit Charge Modal
+    var editPlanModal = document.getElementById("editPlanModal");
+    if (editPlanModal) {
+        editPlanModal.addEventListener("show.bs.modal", function(event) {
+            var button = event.relatedTarget;
+            var chargeId = button.getAttribute("data-charge-id");
+            var name = button.getAttribute("data-charge-name");
+            var price = button.getAttribute("data-charge-price");
+            var duration = button.getAttribute("data-charge-duration");
+            var is_active = button.getAttribute("data-charge-is_active") === "true";
+            var benefitsData = button.getAttribute("data-benefits");
+            
+            var form = document.getElementById("editPlanForm");
+            form.action = "{% url 'maintenance_charge_edit' 0 %}".replace("0", chargeId);
+            form.querySelector("#chargeId").value = chargeId;
+            form.querySelector("#edit_name").value = name || "";
+            form.querySelector("#edit_price").value = price || "";
+            form.querySelector("#edit_duration").value = duration || "1";
+            form.querySelector("#edit_is_active").checked = is_active;
+            
+            // Clear existing benefits
+            editBenefitsContainer.innerHTML = '';
+            
+            // Parse and add existing benefits
+            if (benefitsData) {
+                try {
+                    var benefits = JSON.parse(benefitsData);
+                    benefits.forEach(function(benefit) {
+                        if (benefit.name) {
+                            const benefitDiv = document.createElement('div');
+                            benefitDiv.className = 'input-group benefit-item mt-2';
+                            benefitDiv.innerHTML = `
+                                <input type="hidden" name="existing_benefits_ids[]" value="${benefit.id}">
+                                <input type="text" class="form-control" name="existing_benefits[]" value="${benefit.name}">
+                                <button type="button" class="btn btn-danger remove-benefit">Remove</button>
+                            `;
+                            editBenefitsContainer.appendChild(benefitDiv);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error parsing benefits data:', error);
+                }
+            }
+        });
+    }
+
+    // Toggle the visibility of the action card
+    document.querySelectorAll(".three-dots-menu").forEach(function(menu) {
+        menu.addEventListener("click", function(event) {
+            event.preventDefault();
+            var actionCard = menu.nextElementSibling;
+            actionCard.style.display = actionCard.style.display === "none" || actionCard.style.display === "" ? "block" : "none";
+            // Close other open action cards
+            document.querySelectorAll(".action-card").forEach(function(card) {
+                if (card !== actionCard) {
+                    card.style.display = "none";
+                }
+            });
+        });
+    });
+
+    // Delete Charge Modal
+    var deletePlanModal = document.getElementById('deletePlanModal');
+    if (deletePlanModal) {
+        deletePlanModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var chargeID = button.getAttribute('data-charge-id');
+            var deleteForm = document.getElementById('deletePlanForm');
+            deleteForm.action = "{% url 'maintenance_charge_delete' 0 %}".replace('0', chargeID);
+        });
+    }
+
+    // Function to clear form errors
+    function clearFormErrors(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            const errorFields = form.querySelectorAll('.is-invalid');
+            errorFields.forEach(field => {
+                field.classList.remove('is-invalid');
+            });
+            
+            const errorMessages = form.querySelectorAll('.invalid-feedback');
+            errorMessages.forEach(message => {
+                message.textContent = '';
+            });
+        }
+    }
+
+    // Function to reset form data
+    function resetFormData(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.reset();
+        }
+    }
+
+    // Function to reset benefits container
+    function resetBenefitsContainer(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            // Keep only the first benefit input
+            const benefitItems = container.querySelectorAll('.benefit-item');
+            if (benefitItems.length > 1) {
+                for (let i = 1; i < benefitItems.length; i++) {
+                    benefitItems[i].remove();
+                }
+            }
+            
+            // Clear the value of the first benefit input
+            const firstInput = container.querySelector('input[name="benefits[]"]');
+            if (firstInput) {
+                firstInput.value = '';
+            }
+        }
+    }
+});
+
+$(document).ready(function () {
+    // Define required fields for both forms
+    const requiredFields = {
+        '#addPlanForm': ['#name', '#price', '#duration'],
+        '#editPlanForm': ['#edit_name', '#edit_price', '#edit_duration']
+    };
+
+    // Function to validate a form
+    function validateForm(formId) {
+        let isValid = true;
+        const form = $(formId);
+        
+        // Validate each required field
+        requiredFields[formId].forEach(fieldId => {
+            const field = form.find(fieldId);
+            const errorElement = $(`${fieldId}-error`);
+            
+            if (field.val().trim() === '') {
+                field.addClass('is-invalid');
+                errorElement.text('This field is required.').css('color', 'red');
+                isValid = false;
+            } else {
+                field.removeClass('is-invalid');
+                errorElement.text('');
+                
+                // Additional validation for price fields
+                if (fieldId === '#price' || fieldId === '#edit_price') {
+                    if (parseFloat(field.val()) <= 0) {
+                        field.addClass('is-invalid');
+                        errorElement.text('Price must be greater than 0.').css('color', 'red');
+                        isValid = false;
+                    }
+                }
+            }
+        });
+        
+        return isValid;
+    }
+
+    // Add form validation on submit
+    $('#addPlanForm').on('submit', function (event) {
+        event.preventDefault();
+        if (!validateForm('#addPlanForm')) {
+            return false;
+        }
+        this.submit();
+    });
+
+    // Edit form validation on submit
+    $('#editPlanForm').on('submit', function (event) {
+        event.preventDefault();
+        if (!validateForm('#editPlanForm')) {
+            return false;
+        }
+        this.submit();
+    });
+
+    // Clear validation errors when user starts typing
+    $('input, textarea, select').on('input change', function () {
+        const field = $(this);
+        const fieldId = `#${field.attr('id')}`;
+        const errorElement = $(`${fieldId}-error`);
+        
+        field.removeClass('is-invalid');
+        errorElement.text('');
+    });
+
+    // Initialize form validation on modal show to clear previous errors
+    $('#addPlanModal, #editPlanModal').on('show.bs.modal', function () {
+        $(this).find('.is-invalid').removeClass('is-invalid');
+        $(this).find('.invalid-feedback').text('');
+    });
+
+    // Hide action card if clicking outside
+    $(document).on('click', function(event) {
+        if (!$(event.target).closest('.action-menu-container').length) {
+            $('.action-card').hide();
+        }
+    });
+});
+</script>
+{% endblock %}

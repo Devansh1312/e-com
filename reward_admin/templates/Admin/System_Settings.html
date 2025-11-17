@@ -1,0 +1,287 @@
+{% extends 'base.html' %} 
+{% load static %} 
+{% load sass_tags %} 
+{% block css %}
+{% endblock %}
+{% block title %}System Settings{% endblock %} 
+{% block content %} 
+{% include "components/loader.html" %}
+<div class="page-body">
+   <div class="container-fluid">
+      <div class="page-title">
+         <div class="row">
+            <div class="col-6">
+               <h3>{{ breadcrumb.child }}</h3>
+            </div>
+            <div class="col-6"></div>
+         </div>
+     </div>
+    <div class="row" style="margin-top: 10px; margin-bottom: 10px ; ">
+     </div>
+    <div class="card">
+         <form class="form theme-form" method="post" enctype="multipart/form-data"> 
+            {% csrf_token %} 
+            <div class="card-body">
+               <div class="row mb-3">
+                  <h4 class="col-12">Basic Website Settings</h4>
+               </div>
+               <div style="border-top: 1px solid #ccc; margin-top: 5px; margin-bottom: 20px;"></div>
+               <div class="row">
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="website_name">Website Name</label>
+                        <input class="form-control btn-pill" id="website_name" name="website_name" type="text" 
+                               value="{{ system_settings.website_name }}" placeholder="Website Name">
+                     </div>
+                  </div>
+                </div>
+               <!-- Phone Number -->
+               <div class="row">
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="phone">Phone Number</label>
+                        <textarea class="form-control btn-pill {% if errors.phone %}is-invalid{% endif %}" 
+                               id="phone" name="phone" rows="2"
+                               placeholder="Phone Number" required>{{ system_settings.phone }}</textarea>
+                        {% if errors.phone %} 
+                        <div class="invalid-feedback">{{ errors.phone }}</div> 
+                        {% endif %}
+                     </div>
+                  </div>
+                  <!-- Email Address -->
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="email">Email Address</label>
+                        <textarea class="form-control btn-pill {% if errors.email %}is-invalid{% endif %}" 
+                               id="email" name="email" rows="2"
+                               placeholder="Email Address">{{ system_settings.email }}</textarea>
+                        {% if errors.email %} 
+                        <div class="invalid-feedback">{{ errors.email }}</div> 
+                        {% endif %}
+                     </div>
+                  </div>
+               </div>
+               <!-- Club Address -->
+               <div class="row">
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="club_address">Club Address</label>
+                        <textarea class="form-control btn-pill" id="club_address" name="club_address" 
+                                  rows="3" placeholder="Club Address">{{ system_settings.club_address }}</textarea>
+                     </div>
+                  </div>
+                  <!-- Office Address -->
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="office_address">Office Address</label>
+                        <textarea class="form-control btn-pill" id="office_address" name="office_address" 
+                                  rows="3" placeholder="Office Address">{{ system_settings.office_address }}</textarea>
+                     </div>
+                  </div>
+               </div>
+               <div class="row" style="margin-bottom: 10px;">
+                  <h4>Website Logos</h4>
+               </div>
+               <div style="border-top: 1px solid #ccc; margin-top: 5px; margin-bottom: 20px;"></div>
+               <!-- Favicon -->
+               <div class="row">
+                  <div class="col-12 col-md-4">
+                     <div class="mb-3">
+                        <label class="form-label" for="fav_icon">Fav Icon (64x64 px)</label>
+                        <input class="form-control btn-pill" id="fav_icon" name="fav_icon" type="file"> 
+                        {% if system_settings.fav_icon %} 
+                        <img src="{{ MEDIA_URL }}{{ system_settings.fav_icon }}" alt="Fav Icon" style="width: 35px; height: 35px; margin-top: 10px;"> 
+                        {% endif %}
+                     </div>
+                  </div>
+                  <!-- Website Logo -->
+                  <div class="col-12 col-md-4">
+                     <div class="mb-3">
+                        <label class="form-label" for="website_logo">Website Logo</label>
+                        <input class="form-control btn-pill" id="website_logo" name="website_logo" type="file"> 
+                        {% if system_settings.website_logo %} 
+                        <img src="{{ MEDIA_URL }}{{ system_settings.website_logo }}" alt="Website Logo" style="max-width: 200px; max-height: 100px; margin-top: 10px;"> 
+                        {% endif %}
+                     </div>
+                  </div>
+               </div>
+               <div class="row" style="margin-bottom: 10px;">
+                  <h4>Other Settings</h4>
+               </div>
+               <div class="row">
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="gst_number">GST Number</label>
+                        <input class="form-control btn-pill" id="gst_number" name="gst_number" type="text" 
+                               value="{{ system_settings.gst_number }}" placeholder="GST Number">
+                     </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="rupees_to_presidencyclub_points">Rupees to Reward Points</label>
+                        <input class="form-control btn-pill" id="rupees_to_presidencyclub_points" name="rupees_to_presidencyclub_points" type="number" 
+                               value="{{ system_settings.rupees_to_presidencyclub_points }}" placeholder="Rupees to Reward Points" min="1">
+                     </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="user_reffer_points">User Reffral Points</label>
+                        <input class="form-control btn-pill" id="user_reffer_points" name="user_reffer_points" type="number" 
+                               value="{{ system_settings.user_reffer_points }}" placeholder="User Reffer Points" min="0">
+                               {% if errors.user_reffer_points %} 
+                        <div class="invalid-feedback">{{ errors.user_reffer_points }}</div> 
+                        {% endif %}
+                     </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="razorpay_key">Razorpay Key</label>
+                        <input class="form-control btn-pill" id="razorpay_key" name="razorpay_key" type="text" 
+                               value="{{ system_settings.razorpay_key }}" placeholder="Razorpay Key">
+                     </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                     <div class="mb-3">
+                        <label class="form-label" for="razorpay_secret">Razorpay Secret</label>
+                        <input class="form-control btn-pill" id="razorpay_secret" name="razorpay_secret" type="text" 
+                               value="{{ system_settings.razorpay_secret }}" placeholder="Razorpay Secret">
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div class="card-footer text-end">
+               <button class="btn btn-primary" type="submit">Save</button>
+               <input class="btn btn-light" type="reset" value="Cancel">
+            </div>
+         </form>
+      </div>
+   </div>
+</div> 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Constants
+    const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    const REQUIRED_FIELDS = [
+        '#phone','#gst_number','#razorpay_key','#razorpay_secret','#reward_points_to_rupees', '#reward_points_to_rupees', '#user_reffer_points'
+    ];
+    
+    
+    // Initialize form validation
+    const initFormValidation = () => {
+        // Form submission handler
+        $('form').on('submit', function(e) {
+            resetValidation();
+            const hasErrors = validateForm();
+            
+            if (hasErrors) {
+                e.preventDefault();
+                scrollToFirstError();
+                return false;
+            }
+            return true;
+        });
+        
+        // Real-time validation on blur
+        $(REQUIRED_FIELDS.join(',')).on('blur', function() {
+            validateField($(this));
+        });
+        
+        // Image validation
+        $('input[type="file"]').on('change', function() {
+            validateImageFile(this);
+        });
+    };
+    
+    // Reset validation state
+    const resetValidation = () => {
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+    };
+    
+    // Validate entire form
+    const validateForm = () => {
+        let hasErrors = false;
+        
+        REQUIRED_FIELDS.forEach(field => {
+            const $field = $(field);
+            if (!$field.val().trim()) {
+                showError($field, 'This field is required.');
+                hasErrors = true;
+            }
+        });
+        
+        // Special validations
+        const email = $('#email').val().trim();
+        if (email && !isValidEmail(email)) {
+            showError($('#email'), 'Please enter a valid email address.');
+            hasErrors = true;
+        }
+        
+        const phone = $('#phone').val().trim();
+        if (phone && !isValidPhone(phone)) {
+            showError($('#phone'), 'Please enter a valid phone number.');
+            hasErrors = true;
+        }
+        
+        return hasErrors;
+    };
+    
+    // Validate individual field
+    const validateField = ($field) => {
+        const id = $field.attr('id');
+        const value = $field.val().trim();
+        
+        if (!value && REQUIRED_FIELDS.includes(`#${id}`)) {
+            showError($field, 'This field is required.');
+            return false;
+        }
+        
+        clearError($field);
+        return true;
+    };
+    
+    // Show error for a field
+    const showError = ($field, message) => {
+        $field.addClass('is-invalid');
+        if (!$field.next('.invalid-feedback').length) {
+            $field.after(`<div class="invalid-feedback">${message}</div>`);
+        } else {
+            $field.next('.invalid-feedback').text(message);
+        }
+    };
+    
+    // Clear error for a field
+    const clearError = ($field) => {
+        $field.removeClass('is-invalid');
+        $field.next('.invalid-feedback').remove();
+    };
+    
+    // Scroll to first error
+    const scrollToFirstError = () => {
+        const $firstError = $('.is-invalid').first();
+        if ($firstError.length) {
+            $('html, body').animate({
+                scrollTop: $firstError.offset().top - 100
+            }, 500);
+        }
+    };
+    
+    // Validate image file
+    const validateImageFile = (input) => {
+        const file = input.files[0];
+        if (!file) return;
+        
+        if (!IMAGE_TYPES.includes(file.type)) {
+            showError($(input), 'Please upload a valid image (JPEG, PNG, GIF, JPG).');
+            input.value = '';
+        } else {
+            clearError($(input));
+        }
+    };
+    
+    // Initialize the form validation
+    initFormValidation();
+});
+</script>
+{% endblock %}
