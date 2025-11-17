@@ -19,7 +19,6 @@ from django.db import transaction
 from django.db.models import Sum, Q
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.files.storage import default_storage
-from django.contrib.auth.hashers import make_password
 from django.core.paginator import EmptyPage
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
@@ -28,6 +27,7 @@ from django.utils import timezone
 from django.utils.timezone import now
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_date
+from django.utils.text import slugify
 from django.views import View
 
 # ========================================
@@ -54,6 +54,74 @@ from xhtml2pdf import pisa
 # ========================================
 from reward_admin.models import *
 from reward_api.serializers import *
+
+
+OTP_EXPIRY_MINUTES = 10
+
+
+def _get_customer_role():
+    preferred_names = ['Customer', 'Member', 'User']
+    for name in preferred_names:
+        role = Role.objects.filter(name__iexact=name).first()
+        if role:
+            return role
+    return Role.objects.order_by('id').first()
+
+
+def _generate_unique_username(seed_value: str) -> str:
+    base_value = slugify(seed_value) if seed_value else ''
+    if not base_value:
+        base_value = f"user{random.randint(1000, 9999)}"
+    username = base_value
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base_value}{counter}"
+        counter += 1
+    return username
+
+
+def _get_otp_timestamp(otp_instance):
+    return otp_instance.updated_at or otp_instance.created_at
+
+
+def _build_absolute_media_url(request, path):
+    if not path:
+        return None
+    if request:
+        return request.build_absolute_uri(path)
+    return path
+
+
+def serialize_product_record(product_obj, request=None):
+    if not product_obj:
+        return None
+
+    image_urls = []
+    images = getattr(product_obj, 'images', None)
+    if images is not None:
+        for img in images.all():
+            if img.image:
+                url = _build_absolute_media_url(request, img.image.url)
+                if url:
+                    image_urls.append(url)
+
+    return {
+        'id': product_obj.id,
+        'name': product_obj.name,
+        'description': product_obj.description,
+        'mrp': str(product_obj.MRP) if product_obj.MRP is not None else None,
+        'sale_price': str(product_obj.sale_price) if product_obj.sale_price is not None else None,
+        'status': product_obj.status,
+        'url': product_obj.url,
+        'category': {
+            'id': product_obj.category.id,
+            'name': product_obj.category.name,
+        } if product_obj.category else None,
+        'image_urls': image_urls,
+        'image_urls_csv': ','.join(image_urls) if image_urls else '',
+        'created_at': product_obj.created_at.isoformat() if product_obj.created_at else None,
+        'updated_at': product_obj.updated_at.isoformat() if product_obj.updated_at else None,
+    }
 
 
 ############# Custom Pagination #############################
@@ -109,7 +177,7 @@ class SendRegistrationOTP(APIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
+        email = (request.data.get('email') or '').strip().lower()
         phone = request.data.get('phone')
         
         if not email:
@@ -138,16 +206,11 @@ class SendRegistrationOTP(APIView):
                 'message': 'Mobile Number already registered.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate 4-digit OTP
-        otp = str(random.randint(1000, 9999))
-        
-        # Delete any existing OTP for this email
-        OTPSave.objects.filter(email=email).delete()
-        
-        # Save OTP to database
-        otp_record = OTPSave.objects.create(
+        # Generate 4-digit OTP and persist (overwrite previous attempts)
+        otp = random.randint(1000, 9999)
+        otp_record, _ = OTPSave.objects.update_or_create(
             email=email,
-            OTP=otp
+            defaults={'OTP': otp}
         )
         
         try:
@@ -169,7 +232,6 @@ class SendRegistrationOTP(APIView):
             # Production note: Uncomment the following lines to handle email sending errors
             if not email_sent:
                 # Delete the OTP record if email fails to send
-                otp_record.delete()
                 return Response({
                     'status': 0,
                     'message': 'Failed to send OTP email.'
@@ -186,7 +248,6 @@ class SendRegistrationOTP(APIView):
             
         except Exception as e:
             # Delete the OTP record if email fails to send
-            otp_record.delete()
             return Response({
                 'status': 0,
                 'message': 'Failed to send OTP email.',
@@ -202,7 +263,7 @@ def send_registration_otp(email, otp, system_settings, subject, request):
 
         # Prepare context for email template
         context = {
-            'otp': otp,
+            'otp': str(otp),
             'current_year': datetime.now().year,
             'logo': logo_url,
             'static_url': static_url,
@@ -231,145 +292,95 @@ class VerifyOTPAndRegister(APIView):
     permission_classes = [AllowAny]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
 
-    def generate_membership_id(self, parent_id=None):
-        current_year = timezone.now().year
-        
-        if parent_id:
-            # This is a child member - use parent's family number and increment member number
-            parts = parent_id.split('/')
-            family_number = parts[2]
-            
-            # Find the highest member number for this family
-            last_member = User.objects.filter(
-                membership_id__startswith=f"FM/{current_year}/{family_number}/"
-            ).order_by('-membership_id').first()
-            
-            if last_member:
-                last_number = int(last_member.membership_id.split('/')[3])
-                new_number = last_number + 1
-            else:
-                new_number = 1
-                
-            return f"FM/{current_year}/{family_number}/{new_number:02d}"
-        else:
-            # This is a parent member - create new family number
-            # Find the last family number for this year
-            last_family = User.objects.filter(
-                membership_id__regex=r'FM/' + str(current_year) + r'/\d{4}/01$'
-            ).order_by('-membership_id').first()
-            
-            if last_family:
-                last_family_number = int(last_family.membership_id.split('/')[2])
-                new_family_number = last_family_number + 1
-            else:
-                new_family_number = 1
-                
-            return f"FM/{current_year}/{new_family_number:04d}/01"
-
     def post(self, request, *args, **kwargs):
-        # Get all required fields
-        full_name = request.data.get('name')
-        email = request.data.get('email')
-        phone = request.data.get('phone')
-        date_of_birth = request.data.get('date_of_birth')
+        full_name = (request.data.get('name') or '').strip()
+        email = (request.data.get('email') or '').strip().lower()
+        phone = (request.data.get('phone') or '').strip()
+        date_of_birth = (request.data.get('date_of_birth') or '').strip()
         password = request.data.get('password')
-        otp = request.data.get('otp')
-        parent_membership_id = request.data.get('parent_membership_id') or None
+        otp = (request.data.get('otp') or '').strip()
+        username_input = (request.data.get('username') or '').strip()
 
-        # Validate required fields
-        if not all([full_name, email, phone, date_of_birth, password, otp]):
+        if not all([full_name, email, phone, password, otp]):
             return Response({
                 'status': 0,
-                'message': 'All fields are required.'
+                'message': 'Name, email, phone, password and OTP are required.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Split full name into first and last name
         name_parts = full_name.split(' ', 1)
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ''
 
-        # Check if email already exists in User model
+        if date_of_birth:
+            parsed_dob = parse_date(date_of_birth)
+            if not parsed_dob:
+                return Response({
+                    'status': 0,
+                    'message': 'Invalid date format. Use YYYY-MM-DD.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            parsed_dob = None
+
+        if len(password) < 8:
+            return Response({
+                'status': 0,
+                'message': 'Password must be at least 8 characters long.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         if User.objects.filter(email=email).exists():
             return Response({
                 'status': 0,
                 'message': 'Email already registered.'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if Mobile Number already exists in User model
+
         if User.objects.filter(phone=phone).exists():
             return Response({
                 'status': 0,
-                'message': 'Mobile Number already registered.'
+                'message': 'Mobile number already registered.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Verify OTP
         try:
             otp_record = OTPSave.objects.get(email=email)
         except OTPSave.DoesNotExist:
             return Response({
                 'status': 0,
-                'message': 'OTP not found for this email.'
+                'message': 'Please request a new OTP.'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        ##### For Testing Purpose
-        if otp not in ['1234', 1234]:
+
+        if str(otp_record.OTP) != otp:
             return Response({
                 'status': 0,
                 'message': 'Invalid OTP.'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # For Production
-        # if otp_record.OTP != otp:
-        #     return Response({
-        #         'status': 0,
-        #         'message': 'Invalid OTP.'
-        #     }, status=status.HTTP_400_BAD_REQUEST)
 
-        # # Check if OTP is expired (assuming 5 minutes validity)
-        # if timezone.now() > otp_record.created_at + timedelta(minutes=5):
-        #     return Response({
-        #         'status': 0,
-        #         'message': 'OTP has expired.'
-        #     }, status=status.HTTP_400_BAD_REQUEST)
-        
+        otp_timestamp = _get_otp_timestamp(otp_record)
+        if otp_timestamp and timezone.now() > otp_timestamp + timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return Response({
+                'status': 0,
+                'message': 'OTP has expired.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        username_seed = username_input or (email.split('@')[0] if email else phone)
+        username = _generate_unique_username(username_seed)
+        customer_role = _get_customer_role()
+
         try:
-            # Generate membership ID
-            membership_id = self.generate_membership_id(parent_membership_id)
-            
-            # Find parent user if provided
-            parent_user = None
-            if parent_membership_id:
-                parent_user = User.objects.filter(membership_id=parent_membership_id).first()
-                if not parent_user:
-                    return Response({
-                        'status': 0,
-                        'message': 'Parent member not found.'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Create the user
-            user = User.objects.create(
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
                 first_name=first_name,
                 last_name=last_name,
-                username=membership_id,
-                email=email,
-                phone=phone,
                 name=full_name,
-                password=make_password(password),
-                date_of_birth=date_of_birth if date_of_birth else None,
-                is_active=True,
+                phone=phone,
+                date_of_birth=parsed_dob,
                 register_type='Mobile App',
-                membership_id=membership_id,
-                parent=parent_user,
-                role_id=3,   # Club Member role
-                # Use parent's dates if this is a child member
-                enrollment_date=parent_user.enrollment_date if parent_user else None,
-                anniversary_date=parent_user.anniversary_date if parent_user else None
+                role=customer_role,
+                is_active=True,
             )
 
-            # Delete the OTP record after successful registration
             otp_record.delete()
 
-            # Generate tokens for immediate login
             refresh = RefreshToken.for_user(user)
             serializer = UserSerializer(user, context={'request': request})
 
@@ -398,50 +409,37 @@ class LoginAPI(APIView):
     def post(self, request, *args, **kwargs):
         
         try:
-            login_input = request.data.get('email')  # Could be email or membership ID
+            identifier = (
+                request.data.get('identifier')
+                or request.data.get('email')
+                or request.data.get('username')
+                or request.data.get('phone')
+                or ''
+            ).strip()
             password = request.data.get('password')
             device_type = request.data.get('device_type')
             device_token = request.data.get('device_token')
 
-            if not login_input or not password:
+            if not identifier or not password:
                 return Response({
                     'status': 0,
-                    'message': 'Membership ID and password are required.'
+                    'message': 'Username/Email/Phone and password are required.'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            if not device_type and not device_token:
-                return Response({
-                    'status': 0,
-                    'message': 'Device type and token are required.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            user = None
+            if '@' in identifier:
+                user = User.objects.filter(email__iexact=identifier).first()
+            if user is None and identifier.isdigit():
+                user = User.objects.filter(phone=identifier).first()
+            if user is None:
+                user = User.objects.filter(username__iexact=identifier).first()
 
-            if device_type not in ['1', '2', 1, 2]:
-                return Response({
-                    'status': 0,
-                    'message': 'Invalid device type.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Try to authenticate by email or membership ID
-            try:
-                user = User.objects.get(membership_id=login_input)
-            except User.DoesNotExist:
-                return Response({
-                    'status': 0,
-                    'message': 'Invalid credentials.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            if not user.check_password(password):
+            if user is None or not user.check_password(password):
                 return Response({
                     'status': 0,
                     'message': 'Invalid credentials.'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            if user.role_id != 3:
-                return Response({
-                    'status': 0,
-                    'message': 'Invalid credentials.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
             if not user.is_active:
                 return Response({
                     'status': 0,
@@ -449,8 +447,10 @@ class LoginAPI(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             user.last_login = timezone.now()
-            user.device_type = device_type
-            user.device_token = device_token
+            if device_type is not None:
+                user.device_type = device_type
+            if device_token:
+                user.device_token = device_token
             user.save()
 
             refresh = RefreshToken.for_user(user)
@@ -526,7 +526,7 @@ class ForgotPasswordAPI(APIView):
             user = User.objects.get(email=email, is_active=True)
             
             # Generate 4-digit OTP
-            otp = str(random.randint(1000, 9999))
+            otp = random.randint(1000, 9999)
             user.otp = otp
             user.otp_created_at = timezone.now()
             user.save()
@@ -557,9 +557,7 @@ class ForgotPasswordAPI(APIView):
                 return Response({
                     'status': 1,
                     'message': 'A verification code has been sent to your email address. Please check your inbox.',
-                    'data': {
-                        # 'otp': otp
-                        }  # Remove this in production
+                    'data': {}
                 }, status=status.HTTP_200_OK)
                 
             except Exception as e:
@@ -589,7 +587,7 @@ def send_forgot_password_otp(email, otp, system_settings, subject, request):
         static_url = f"{settings.STATIC_DOMAIN}"
         # Prepare context for email template
         context = {
-            'otp': otp,
+            'otp': str(otp),
             'current_year': datetime.now().year,
             'logo': logo_url,
             'static_url': static_url,
@@ -635,20 +633,17 @@ class ResetPasswordOtpVerifyAPI(APIView):
                 'message': 'User with this email does not exist.'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        ##### For Testing Purpose
-        if otp not in ['1234', 1234]:
+        if user.otp is None or str(user.otp) != otp:
             return Response({
                 'status': 0,
                 'message': 'Invalid OTP.'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
 
-        # # Check if OTP matches and is not expired (assuming 5 minutes validity)
-        # if user.otp != otp or timezone.now() > user.otp_created_at + timedelta(minutes=5):
-        #     return Response({
-        #         'status': 0,
-        #         'message': 'Invalid or expired OTP.'
-        #     }, status=status.HTTP_400_BAD_REQUEST)
+        if not user.otp_created_at or timezone.now() > user.otp_created_at + timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return Response({
+                'status': 0,
+                'message': 'OTP has expired.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         # OTP is valid, proceed to reset password
         return Response({
@@ -682,11 +677,15 @@ class ResetPasswordAPI(APIView):
                 'status': 0,
                 'message': 'User with this email does not exist.'
             }, status=status.HTTP_404_NOT_FOUND)
-        # Check if OTP matches and is not expired (assuming 5 minutes validity)
-        if user.otp != otp or timezone.now() > user.otp_created_at + timedelta(minutes=5):
+        if user.otp is None or str(user.otp) != otp:
             return Response({
                 'status': 0,
-                'message': 'Invalid or expired OTP.'
+                'message': 'Invalid OTP.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if not user.otp_created_at or timezone.now() > user.otp_created_at + timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return Response({
+                'status': 0,
+                'message': 'OTP has expired.'
             }, status=status.HTTP_400_BAD_REQUEST)
         # Validate the new password
         if len(new_password) < 8:
@@ -712,16 +711,44 @@ class DashboardAPI(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            user = request.user
-            
+            user = request.user if request.user.is_authenticated else None
+
+            categories_qs = product_category.objects.filter(status=True).order_by('name')
+            latest_products_qs = (
+                product.objects.filter(status=True)
+                .prefetch_related('images', 'category')
+                .order_by('-created_at')[:10]
+            )
+
+            categories_data = [
+                {
+                    'id': category.id,
+                    'name': category.name,
+                    'status': category.status,
+                }
+                for category in categories_qs
+            ]
+
+            latest_products_data = [
+                serialize_product_record(prod, request) for prod in latest_products_qs
+            ]
+
+            response_data = {
+                'categories': categories_data,
+                'latest_products': latest_products_data,
+            }
+
+            if user:
+                response_data['user'] = UserSerializer(user, context={'request': request}).data
+                response_data['cart_items'] = cart.objects.filter(customer=user).count()
+                response_data['wishlist_items'] = wishlist.objects.filter(customer=user).count()
+
             return Response({
                 'status': 1,
                 'message': 'Dashboard data retrieved successfully.',
-                'data': {
-                    'user': UserSerializer(user, context={'request': request}).data
-                }
+                'data': response_data
             }, status=status.HTTP_200_OK)
-            
+
         except Exception as e:
             return Response({
                 'status': 0,
@@ -779,98 +806,107 @@ class EditProfileAPI(APIView):
             user = request.user
             data = request.data
 
-            # Extract and validate fields
             name = data.get('name', '').strip()
             phone = data.get('phone', '').strip()
             dob_raw = data.get('date_of_birth', '').strip()
-            anniversary_date_raw = data.get('anniversary_date', '').strip()
             address = data.get('address', '').strip()
-            state = data.get('state', '').strip()
-            city = data.get('city', '').strip()
+            state_id = data.get('state')
+            city_id = data.get('city')
             pincode = data.get('pincode', '').strip()
+            gender_id = data.get('gender')
+            country_id = data.get('country')
 
             if not name:
                 return Response({
                     'status': 0,
                     'message': 'Name is required.'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             if not phone:
                 return Response({
                     'status': 0,
                     'message': 'Phone is required.'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            if not dob_raw:
-                return Response({
-                    'status': 0,
-                    'message': 'Date of birth is required.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Parse date of birth
-            date_of_birth = parse_date(dob_raw)
 
-            if not date_of_birth:
-                return Response({
-                    'status': 0,
-                    'message': 'Invalid date format. Use YYYY-MM-DD.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            if not phone.isdigit() or len(phone) != 10:
+            if dob_raw:
+                date_of_birth = parse_date(dob_raw)
+                if not date_of_birth:
+                    return Response({
+                        'status': 0,
+                        'message': 'Invalid date format. Use YYYY-MM-DD.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                date_of_birth = None
+
+            if phone and (not phone.isdigit() or len(phone) != 10):
                 return Response({
                     'status': 0,
                     'message': 'Phone number must be 10 digits.'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            if anniversary_date_raw:
-                anniversary_date = parse_date(anniversary_date_raw)
-                if not anniversary_date:
-                    return Response({
-                        'status': 0,
-                        'message': 'Invalid anniversary date format. Use YYYY-MM-DD.'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             state_obj = None
-            if state:
+            if state_id:
                 try:
-                    state_obj = State.objects.get(id=state)
+                    state_obj = State.objects.get(id=state_id)
                 except State.DoesNotExist:
                     return Response({
                         'status': 0,
                         'message': 'Invalid state.'
                     }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             city_obj = None
-            if city:
+            if city_id:
                 try:
-                    city_obj = City.objects.get(id=city)
-                    # Clear existing cities and add the new one
-                    user.cities.clear()
-                    user.cities.add(city_obj)
+                    city_obj = City.objects.get(id=city_id)
                 except City.DoesNotExist:
                     return Response({
                         'status': 0,
                         'message': 'Invalid city.'
                     }, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            gender_obj = None
+            if gender_id:
+                try:
+                    gender_obj = UserGender.objects.get(id=gender_id)
+                except UserGender.DoesNotExist:
+                    return Response({
+                        'status': 0,
+                        'message': 'Invalid gender.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            country_obj = None
+            if country_id:
+                try:
+                    country_obj = Country.objects.get(id=country_id)
+                except Country.DoesNotExist:
+                    return Response({
+                        'status': 0,
+                        'message': 'Invalid country.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
             if pincode:
                 if not pincode.isdigit() or len(pincode) != 6:
                     return Response({
                         'status': 0,
                         'message': 'Pincode must be 6 digits.'
                     }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Update user fields
+                user.pincode = pincode
+
             user.name = name
             name_parts = name.split(' ', 1)
             user.first_name = name_parts[0]
             user.last_name = name_parts[1] if len(name_parts) > 1 else ''
             user.phone = phone
             user.date_of_birth = date_of_birth
-            user.anniversary_date = anniversary_date if anniversary_date_raw else None
             user.address = address
-            user.state = state_obj if state else None
-            user.pincode = pincode
+            user.state = state_obj if state_id else user.state
+            user.gender = gender_obj if gender_id else user.gender
+            user.country = country_obj if country_id else user.country
+
+            if city_obj:
+                user.cities.set([city_obj])
+            elif city_id == '':
+                user.cities.clear()
             user.save()
 
             serializer = UserSerializer(user, context={'request': request})
@@ -943,6 +979,12 @@ class ChangePasswordAPIView(APIView):
         old_password = request.data.get('old_password')
         new_password = request.data.get('new_password')
 
+        if not old_password or not new_password:
+            return Response({
+                'status': 0,
+                'message': 'Old and new passwords are required.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # Check if the old password is correct
         if not user.check_password(old_password):
             return Response({
@@ -955,6 +997,12 @@ class ChangePasswordAPIView(APIView):
             return Response({
                 'status': 0,
                 'message': 'New password must be at least 8 characters long.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if old_password == new_password:
+            return Response({
+                'status': 0,
+                'message': 'New password must be different from the old password.',
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Set the new password and save the user
@@ -979,3 +1027,299 @@ class DeleteUserView(APIView):
             'status': 1,
             'message': 'User account deleted successfully.',
         }, status=status.HTTP_200_OK)
+
+
+
+
+#################################### Product Category Wise API View ####################################
+class ProductCategoryWiseAPIView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            category_id = request.query_params.get('category_id')
+            if not category_id:
+                return Response({
+                    'status': 0,
+                    'message': 'Category ID is required.',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                category = product_category.objects.get(id=category_id, status=True)
+            except product_category.DoesNotExist:
+                return Response({
+                    'status': 0,
+                    'message': 'Category not found.',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            products = (
+                product.objects.filter(category=category, status=True)
+                .prefetch_related('images', 'category')
+                .order_by('-created_at')
+            )
+
+            product_data = [serialize_product_record(prod, request) for prod in products]
+
+            return Response({
+                'status': 1,
+                'message': 'Product category wise data retrieved successfully.',
+                'data': {
+                    'category': {
+                        'id': category.id,
+                        'name': category.name,
+                    },
+                    'products': product_data
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'An error occurred while retrieving product category wise data.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+################# product list with All Images API View ####################################
+class ProductListWithImagesAPIView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            category_id = request.query_params.get('category_id')
+            search = request.query_params.get('search')
+
+            products_qs = product.objects.filter(status=True)
+            if category_id:
+                products_qs = products_qs.filter(category_id=category_id)
+            if search:
+                products_qs = products_qs.filter(name__icontains=search)
+
+            products_qs = products_qs.prefetch_related('images', 'category').order_by('-created_at')
+
+            products_data = [serialize_product_record(prod, request) for prod in products_qs]
+
+            return Response({
+                'status': 1,
+                'message': 'Products retrieved successfully.',
+                'data': products_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'An error occurred while retrieving products.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProductDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get(self, request, pk, *args, **kwargs):
+        try:
+            product_obj = (
+                product.objects.prefetch_related('images', 'category')
+                .get(id=pk, status=True)
+            )
+            data = serialize_product_record(product_obj, request)
+            return Response({
+                'status': 1,
+                'message': 'Product retrieved successfully.',
+                'data': data
+            }, status=status.HTTP_200_OK)
+        except product.DoesNotExist:
+            return Response({
+                'status': 0,
+                'message': 'Product not found.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'An error occurred while retrieving product detail.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AddToCartAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return Response({
+                    'status': 0,
+                    'message': 'Product ID is required.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                product_obj = product.objects.get(id=product_id, status=True)
+            except product.DoesNotExist:
+                return Response({
+                    'status': 0,
+                    'message': 'Product not found.'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            cart_item, created = cart.objects.get_or_create(
+                customer=request.user,
+                product=product_obj
+            )
+
+            message = 'Product added to cart.' if created else 'Product already in cart.'
+            total_items = cart.objects.filter(customer=request.user).count()
+
+            return Response({
+                'status': 1,
+                'message': message,
+                'data': {
+                    'cart_item_id': cart_item.id,
+                    'total_items': total_items
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'Unable to add product to cart.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CartListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            cart_items = (
+                cart.objects.filter(customer=request.user)
+                .select_related('product__category')
+                .prefetch_related('product__images')
+                .order_by('-created_at')
+            )
+
+            items_data = []
+            total_amount = Decimal('0.00')
+            for item in cart_items:
+                product_obj = item.product
+                if not product_obj:
+                    continue
+                product_data = serialize_product_record(product_obj, request)
+                price = product_obj.sale_price
+                if price is None:
+                    price = product_obj.MRP
+                if price is None:
+                    price = Decimal('0.00')
+                total_amount += price
+                items_data.append({
+                    'cart_item_id': item.id,
+                    'product': product_data,
+                    'price': str(price)
+                })
+
+            return Response({
+                'status': 1,
+                'message': 'Cart data retrieved successfully.',
+                'data': {
+                    'items': items_data,
+                    'total_items': len(items_data),
+                    'total_amount': str(total_amount)
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'Unable to fetch cart data.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AddToWishlistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return Response({
+                    'status': 0,
+                    'message': 'Product ID is required.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                product_obj = product.objects.get(id=product_id, status=True)
+            except product.DoesNotExist:
+                return Response({
+                    'status': 0,
+                    'message': 'Product not found.'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            wishlist_item, created = wishlist.objects.get_or_create(
+                customer=request.user,
+                product=product_obj
+            )
+
+            message = 'Product added to wishlist.' if created else 'Product already in wishlist.'
+            total_items = wishlist.objects.filter(customer=request.user).count()
+
+            return Response({
+                'status': 1,
+                'message': message,
+                'data': {
+                    'wishlist_item_id': wishlist_item.id,
+                    'total_items': total_items
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'Unable to add product to wishlist.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WishlistListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            wishlist_items = (
+                wishlist.objects.filter(customer=request.user)
+                .select_related('product__category')
+                .prefetch_related('product__images')
+                .order_by('-created_at')
+            )
+
+            items_data = []
+            for item in wishlist_items:
+                product_obj = item.product
+                if not product_obj:
+                    continue
+                product_data = serialize_product_record(product_obj, request)
+                items_data.append({
+                    'wishlist_item_id': item.id,
+                    'product': product_data,
+                })
+
+            return Response({
+                'status': 1,
+                'message': 'Wishlist data retrieved successfully.',
+                'data': {
+                    'items': items_data,
+                    'total_items': len(items_data),
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'status': 0,
+                'message': 'Unable to fetch wishlist data.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

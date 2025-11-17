@@ -1,67 +1,74 @@
 from rest_framework import serializers
-from reward_admin.models import *
-from django.core.cache import cache
-from django.utils import timezone
-from django.db.models import Q, Max, Prefetch
+from reward_admin.models import User, FAQ, SystemSettings
 
 
-class UserSerializer(serializers.ModelSerializer):    
-    presidencyclub_balance = serializers.SerializerMethodField()
-    
+class UserSerializer(serializers.ModelSerializer):
+    city = serializers.SerializerMethodField()
+    profile_picture_url = serializers.SerializerMethodField()
+    gender_name = serializers.SerializerMethodField()
+    state_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = '__all__'
-        extra_kwargs = {
-            'password': {'write_only': True},
-        }
-    
-    
-    def get_presidencyclub_balance(self, obj):
-        """Return parent's balance if user is a child, otherwise return own balance"""
-        if obj.parent:
-            # If this is a child user, return parent's balance
-            return obj.parent.presidencyclub_balance
-        else:
-            # If this is a parent user, return own balance
-            return obj.presidencyclub_balance
-    
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
+        fields = [
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'name',
+            'email',
+            'phone',
+            'date_of_birth',
+            'gender',
+            'gender_name',
+            'country',
+            'state',
+            'state_name',
+            'city',
+            'address',
+            'pincode',
+            'profile_picture',
+            'profile_picture_url',
+            'device_type',
+            'device_token',
+            'register_type',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = (
+            'username',
+            'register_type',
+            'created_at',
+            'updated_at',
+        )
 
-        # Return only relative path instead of absolute URL
-        if instance.profile_picture:
-            representation['profile_picture'] = instance.profile_picture.url
+    def get_city(self, obj):
+        city = obj.cities.first()
+        return city.id if city else None
 
-        # Only include the first city ID if cities are available
-        city_ids = list(instance.cities.values_list('id', flat=True))
-        representation['city'] = city_ids[0] if city_ids else None
-        representation.pop('cities', None)  # Remove full M2M field if you don't want it
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            url = obj.profile_picture.url
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
 
-        # Add child users array if user has children
-        child_users = instance.children.all()
-        if child_users.exists():
-            representation['child_users'] = [
-                {
-                    'name': child.name if child.name else f"{child.first_name} {child.last_name}".strip(),
-                    'membership_id': child.membership_id,
-                    'presidencyclub_balance': instance.presidencyclub_balance  # Parent's balance for all children
-                }
-                for child in child_users
-            ]
-        else:
-            representation['child_users'] = []
+    def get_gender_name(self, obj):
+        return obj.gender.name if obj.gender else None
 
-        return representation
+    def get_state_name(self, obj):
+        return obj.state.name if obj.state else None
  
+
 class FAQSerializer(serializers.ModelSerializer):
     class Meta:
         model = FAQ
         fields = ['id', 'question', 'answer', 'created_at']
 
     def to_representation(self, instance):
-        """
-        Convert the created_at field to a more readable format
-        """
         ret = super().to_representation(instance)
         ret['created_at'] = instance.created_at.strftime("%Y-%m-%d %H:%M") if instance.created_at else None
         return ret
@@ -72,25 +79,23 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         model = SystemSettings
         fields = '__all__'
 
+
 class UserBasicSerializer(serializers.ModelSerializer):
-    """Basic user serializer for maintenance records"""
-    
     full_name = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = User
         fields = [
             'id',
             'username',
-            'membership_id',
             'name',
             'full_name',
             'email',
-            'phone'
+            'phone',
         ]
-    
+
     def get_full_name(self, obj):
-        """Get user's full name"""
         if obj.name:
             return obj.name
-        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+        full_name = f"{obj.first_name} {obj.last_name}".strip()
+        return full_name or obj.username

@@ -16,6 +16,17 @@ urlpatterns = [
     # -------------------- Dashboard --------------------
     path('api/dashboard/', DashboardAPI.as_view()),  # User dashboard data
 
+    # -------------------- Product Catalog --------------------
+    path('api/product-category/', ProductCategoryWiseAPIView.as_view()),
+    path('api/products/', ProductListWithImagesAPIView.as_view()),
+    path('api/products/<int:pk>/', ProductDetailAPIView.as_view()),
+
+    # -------------------- Cart & Wishlist --------------------
+    path('api/cart/', CartListAPIView.as_view()),
+    path('api/cart/add/', AddToCartAPIView.as_view()),
+    path('api/wishlist/', WishlistListAPIView.as_view()),
+    path('api/wishlist/add/', AddToWishlistAPIView.as_view()),
+
     # -------------------- FAQs --------------------
     path('api/faq/', FAQListAPIView.as_view()),  # List FAQs
 
