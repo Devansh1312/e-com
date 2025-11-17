@@ -45,9 +45,6 @@ from rest_framework.exceptions import ValidationError
 # Third-Party Library Imports
 # ========================================
 from rest_framework_simplejwt.tokens import RefreshToken
-import qrcode
-from weasyprint import HTML
-from xhtml2pdf import pisa
 
 # ========================================
 # Application-Specific Imports

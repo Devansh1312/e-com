@@ -39,15 +39,7 @@ from django.contrib.auth.models import User
 # ======================
 from django.db.models import Q, Sum, F, Prefetch
 
-# =======================
-# Third-Party Dependencies
-# =======================
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.utils import ImageReader
-from reportlab.platypus import Paragraph
+
 
 # ========================
 # Standard Library Modules
@@ -57,7 +49,6 @@ import json
 import csv
 import string
 import random
-import openpyxl
 from io import BytesIO, StringIO
 from datetime import datetime, date, timedelta
 from calendar import month_name
