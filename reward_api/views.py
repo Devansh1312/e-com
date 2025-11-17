@@ -54,7 +54,6 @@ from xhtml2pdf import pisa
 # ========================================
 from reward_admin.models import *
 from reward_api.serializers import *
-from reward.firebase_config import send_push_notification
 
 
 ############# Custom Pagination #############################

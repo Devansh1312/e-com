@@ -15,7 +15,6 @@ from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.decorators import method_decorator
 from django.utils.html import strip_tags
 from django.views import View
 from django.views.generic import DeleteView
@@ -67,8 +66,6 @@ from calendar import month_name
 # ================================
 from reward_admin.models import *
 from reward_admin.forms import *
-from reward_admin.decorators import permission_required
-from reward.firebase_config import send_push_notification
 
 
 # Utility function to generate a unique filename for uploaded images
@@ -77,7 +74,6 @@ def generate_unique_filename(prefix, extension):
     return f"{prefix}_{random_str}.{extension}"
   
 ############################ User Active & Deactivate Function ########################################
-@method_decorator(permission_required('club_member_list'), name='dispatch')
 class ToggleUserStatusView(View):
     def post(self, request, pk, *args, **kwargs):
         user = get_object_or_404(User, pk=pk)
@@ -201,7 +197,6 @@ def authenticate_username_email_or_phone(login_input, password):
     return None
 
 ################################ Dashboard View ##########################################
-@method_decorator(permission_required('view_dashboard'), name='dispatch')
 class Dashboard(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Check if user is authenticated
@@ -244,7 +239,6 @@ def logout_view(request):
 
 
 ############################################## List of Club Members ##############################################################
-@method_decorator(permission_required('club_member_list'), name='dispatch')
 class ClubMemberList(LoginRequiredMixin, View):
     template_name = "Admin/User/Club_Member_List.html"
 
@@ -470,7 +464,6 @@ def send_welcome_email(email, membership_id, name, password, system_settings, su
         return False
 
 ################### Club Member Edit View #############################
-@method_decorator(permission_required('club_member_edit'), name='dispatch')
 class ClubMemberEditView(LoginRequiredMixin, View):
     template_name = "Admin/User/Club_Member_Edit.html"
 
@@ -720,7 +713,6 @@ def send_password_change_email(email, membership_id, name, password, system_sett
         return False
 
 # Club Member Toggle Status View
-@method_decorator(permission_required('club_member_edit'), name='dispatch')
 class ClubMemberToggleStatusView(View):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, role_id=3)
@@ -740,7 +732,6 @@ class ClubMemberToggleStatusView(View):
             }, status=500)
 
 ##################################### Club Member Delete View ##############################################
-@method_decorator(permission_required('club_member_delete'), name='dispatch')
 class ClubMemberDeleteView(DeleteView):
     model = User
     success_url = reverse_lazy('club_member_list')
@@ -788,7 +779,6 @@ class ClubMemberDeleteView(DeleteView):
 
 
 ################################## SytemSettings view #######################################################
-@method_decorator(permission_required('System_Settings'), name='dispatch')
 class System_Settings(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         system_settings = SystemSettings.objects.first()
@@ -927,7 +917,6 @@ def change_password_ajax(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 ##################################################### User Profile View ###############################################################
-@method_decorator(permission_required('user_profile'), name='dispatch')
 class UserProfileView(LoginRequiredMixin, View):
     def get(self, request):
         user = request.user
@@ -945,7 +934,6 @@ class UserProfileView(LoginRequiredMixin, View):
 
 
 ##################################################### User Update Profile View ###############################################################
-@method_decorator(permission_required('edit_profile'), name='dispatch')
 class UserUpdateProfileView(View):
     def get(self, request, *args, **kwargs):
         countries = Country.objects.all()
@@ -1160,7 +1148,6 @@ def api_get_cities(request):
 ################################################################# Role CRUD Views ###################################################
 
 # User Role List Module  
-@method_decorator(permission_required('role_list'), name='dispatch')
 class RoleView(LoginRequiredMixin, View):
     template_name = "Admin/Permissions/User_Role.html"
 
@@ -1176,7 +1163,6 @@ class RoleView(LoginRequiredMixin, View):
         )
 
 # # Role Create Views
-# @method_decorator(permission_required('role_list'), name='dispatch')
 # class RoleCreateView(LoginRequiredMixin, View):
 #     def post(self, request):
 #         name = request.POST.get("name")
@@ -1196,7 +1182,6 @@ class RoleView(LoginRequiredMixin, View):
 #         return redirect("role_list")
 
 # Role Edit Views
-@method_decorator(permission_required('role_list'), name='dispatch')
 class RoleEditView(LoginRequiredMixin, View):
     def post(self, request, role_id):
         role = get_object_or_404(Role, id=role_id)
@@ -1211,7 +1196,6 @@ class RoleEditView(LoginRequiredMixin, View):
         return redirect("role_list")
 
 # Role Delete Views
-# @method_decorator(permission_required('role_list'), name='dispatch')
 # class RoleDeleteView(LoginRequiredMixin, View):
 #     def post(self, request, role_id):
 #         role = get_object_or_404(Role, id=role_id)
@@ -1223,7 +1207,6 @@ class RoleEditView(LoginRequiredMixin, View):
 #         return redirect("role_list")
 
 #################################################### Country List View API ##################################################
-@method_decorator(permission_required('country_list'), name='dispatch')
 class CountryListView(View):
     def get(self, request):
         countries = Country.objects.all().order_by('-created_at')
@@ -1232,7 +1215,6 @@ class CountryListView(View):
             'breadcrumb': {'child': 'Country Management'}
         })
 
-@method_decorator(permission_required('country_list'), name='dispatch')
 class CountryCreateView(View):
     def post(self, request):
         code = request.POST.get('code')
@@ -1279,7 +1261,6 @@ class CountryCreateView(View):
 
         return redirect('country_list')
 
-@method_decorator(permission_required('country_list'), name='dispatch')
 class CountryEditView(View):
     def get(self, request, pk):
         country = get_object_or_404(Country, pk=pk)
@@ -1348,7 +1329,6 @@ class CountryEditView(View):
         
         return redirect('country_list')
 
-@method_decorator(permission_required('country_list'), name='dispatch')
 class CountryDeleteView(View):
     def post(self, request, pk):
         country = get_object_or_404(Country, pk=pk)
@@ -1368,7 +1348,6 @@ class CountryDeleteView(View):
 
 
 #################################  State CRUD #######################################
-@method_decorator(permission_required('state_list'), name='dispatch')
 class StateListView(View):
     def get(self, request):
         states = State.objects.select_related('country').all()
@@ -1379,7 +1358,6 @@ class StateListView(View):
             'breadcrumb': {'child': 'State Management'}
         })
 
-@method_decorator(permission_required('state_list'), name='dispatch')
 class StateCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -1402,7 +1380,6 @@ class StateCreateView(View):
         
         return redirect('state_list')
 
-@method_decorator(permission_required('state_list'), name='dispatch')
 class StateEditView(View):
     def get(self, request, pk):
         state = get_object_or_404(State, pk=pk)
@@ -1427,7 +1404,6 @@ class StateEditView(View):
         
         return redirect('state_list')
 
-@method_decorator(permission_required('state_list'), name='dispatch')
 class StateDeleteView(View):
     def post(self, request, pk):
         state = get_object_or_404(State, pk=pk)
@@ -1440,7 +1416,6 @@ class StateDeleteView(View):
         return redirect('state_list')
 
 ############################## City List View #################################
-@method_decorator(permission_required('city_list'), name='dispatch')
 class CityListView(LoginRequiredMixin, View):
     template_name = "Admin/Location/City_List.html"
 
@@ -1591,7 +1566,6 @@ class CityListView(LoginRequiredMixin, View):
         
         return JsonResponse(response)
 
-@method_decorator(permission_required('city_list'), name='dispatch')
 class CityCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -1614,7 +1588,6 @@ class CityCreateView(View):
         
         return redirect('city_list')
 
-@method_decorator(permission_required('city_list'), name='dispatch')
 class CityEditView(View):
     def get(self, request, pk):
         city = get_object_or_404(City, pk=pk)
@@ -1639,7 +1612,6 @@ class CityEditView(View):
         
         return redirect('city_list')
 
-@method_decorator(permission_required('city_list'), name='dispatch')
 class CityDeleteView(View):
     def post(self, request, pk):
         city = get_object_or_404(City, pk=pk)
@@ -1703,7 +1675,6 @@ def get_cities(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@method_decorator(permission_required('sub_admin_list'), name='dispatch')
 class SubAdminList(LoginRequiredMixin, View):
     template_name = "Admin/User/Sub_Admin_List.html"
 
@@ -1881,7 +1852,6 @@ class SubAdminList(LoginRequiredMixin, View):
         return JsonResponse(response)
 
 ######################################## Sub Admin Detail Page #################################################        
-@method_decorator(permission_required('sub_admin_list'), name='dispatch')
 class SubAdminDetailView(LoginRequiredMixin, View):
     template_name = "Admin/User/SubAdmin_Detail.html"
 
@@ -1908,7 +1878,6 @@ class SubAdminDetailView(LoginRequiredMixin, View):
 class SubAdminCreateView(View):
     template_name = "Admin/User/Sub_Admin_Create.html"
     
-    @method_decorator(permission_required('sub_admin_create'))
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
     
@@ -2125,7 +2094,6 @@ class SubAdminCreateView(View):
             return False
 
 ######################################### Sub Admin Edit View ######################################################
-@method_decorator(permission_required('sub_admin_edit'), name='dispatch')
 class SubAdminEditView(View):
     template_name = "Admin/User/Sub_Admin_Edit.html"
     
@@ -2234,7 +2202,6 @@ class SubAdminEditView(View):
 
 
 ############################## Sub Admin Toggle Status View ###################################
-@method_decorator(permission_required('sub_admin_edit'), name='dispatch')
 class SubAdminToggleStatusView(View):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, role_id=2)
@@ -2254,7 +2221,6 @@ class SubAdminToggleStatusView(View):
             }, status=500)
 
 ########################### Sub Admin Delete View #################################
-@method_decorator(permission_required('sub_admin_delete'), name='dispatch')
 class SubAdminDeleteView(View):
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, role_id=2)  # Assuming role_id=2 is for sub-admins
@@ -2532,7 +2498,6 @@ class ResetPasswordAdminView(View):
 
 
 ######################################### FAQ CRUD #########################################
-@method_decorator(permission_required('faq_list'), name='dispatch')
 class FAQView(LoginRequiredMixin, View):
     template_name = "Admin/General_Settings/Faq.html"
 
@@ -2548,7 +2513,6 @@ class FAQView(LoginRequiredMixin, View):
         )
 
 # FAQ Create Views
-@method_decorator(permission_required('faq_list'), name='dispatch')
 class FAQCreateView(LoginRequiredMixin, View):
     def post(self, request):
         question = request.POST.get("question")
@@ -2567,7 +2531,6 @@ class FAQCreateView(LoginRequiredMixin, View):
         return redirect("faq_list")
 
 # FAQ Edit Views 
-@method_decorator(permission_required('faq_list'), name='dispatch')
 class FAQEditView(LoginRequiredMixin, View):
     template_name = "Admin/MobileApp/Faq.html"
 
@@ -2589,7 +2552,6 @@ class FAQEditView(LoginRequiredMixin, View):
         return redirect("faq_list")
 
 # FAQ Delete Views 
-@method_decorator(permission_required('faq_list'), name='dispatch')
 class FAQDeleteView(LoginRequiredMixin, View):
     def post(self, request, faq_id):
         faq = get_object_or_404(FAQ, id=faq_id)
