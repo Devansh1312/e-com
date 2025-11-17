@@ -713,18 +713,12 @@ class DashboardAPI(APIView):
     def get(self, request, *args, **kwargs):
         try:
             user = request.user
-                    
-            
-            # Only count notifications for authenticated users
-            notification_count = 0
-            if user.is_authenticated:
-                notification_count = Notification.objects.filter(is_read=False, user=user).count()
             
             return Response({
                 'status': 1,
                 'message': 'Dashboard data retrieved successfully.',
                 'data': {
-                    'notification_count': notification_count
+                    'user': UserSerializer(user, context={'request': request}).data
                 }
             }, status=status.HTTP_200_OK)
             
@@ -735,86 +729,6 @@ class DashboardAPI(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-######################### Notification API ############################
-class NotificationAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    parser_classes = (JSONParser, MultiPartParser, FormParser)
-    pagination_class = CustomPagination  # Added pagination
-
-    # Get All Notifications
-    def get(self, request, *args, **kwargs):
-        try:
-            user = request.user
-            notifications_qs = user.notifications.all().order_by('-created_at')
-
-            # Paginate the queryset
-            paginator = self.pagination_class()
-            paginated_data = paginator.paginate_queryset(notifications_qs, request)
-
-            # Handle error case from paginator
-            if isinstance(paginated_data, Response):
-                return paginated_data
-
-            serializer = NotificationSerializer(paginated_data, many=True)
-
-            # Mark only the paginated ones as read
-            notifications_qs.filter(id__in=[n.id for n in paginated_data]).update(is_read=True)
-
-            # Return paginated response
-            return paginator.get_paginated_response(serializer.data)
-
-        except Exception as e:
-            return Response({
-                'status': 0,
-                'message': 'An error occurred while retrieving notifications.',
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    #Delete Single Notification
-    def post(self, request, *args, **kwargs):
-        try:
-            user = request.user
-            notification_id = request.data.get('notification_id')
-            notification = Notification.objects.get(id=notification_id, user=user)
-            notification.delete()
-
-            return Response({
-                'status': 1,
-                'message': 'Notification deleted successfully.'
-            }, status=status.HTTP_200_OK)
-            
-        except Notification.DoesNotExist:
-            return Response({
-                'status': 0,
-                'message': 'Notification not found.'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        except Exception as e:
-            return Response({
-                'status': 0,
-                'message': 'An error occurred while deleting the notification.',
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    #Delete All Notification 
-    def patch(self, request, *args, **kwargs):
-        try:
-            user = request.user
-            notifications = user.notifications.all()
-            notifications.delete()
-
-            return Response({
-                'status': 1,
-                'message': 'All notifications deleted successfully.'
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            return Response({
-                'status': 0,
-                'message': 'An error occurred while deleting notifications.',
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #################################### FAQ API View ####################################
 class FAQListAPIView(generics.ListAPIView):

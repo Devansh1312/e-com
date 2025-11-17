@@ -13,10 +13,7 @@ urlpatterns = [
     # -------- Authentication --------
     path('adminlogin/', LoginFormView, name="adminlogin"),
     path('logout/', logout_view, name='logout'),
-    path('forgot-password/', ForgotPasswordAdminView.as_view(), name='Forgot_Password_Admin'),
-    path('verify-otp-admin/', VerifyOTPAdminView.as_view(), name='verify_otp_admin'),
-    path('reset-password-admin/', ResetPasswordAdminView.as_view(), name='reset_password_admin'),
-
+    
     # -------- Dashboards --------
     path('Dashboard/', Dashboard.as_view(), name="view_dashboard"),
 
@@ -40,21 +37,12 @@ urlpatterns = [
     path('user-role/edit/<int:role_id>/', RoleEditView.as_view(), name='role_edit'),
     # path('user-role/delete/<int:role_id>/', RoleDeleteView.as_view(), name='role_delete'),
 
+    # Customer URLs
+    path('customer-users/', CustomerUserListView.as_view(), name='customer_user_list'),
+    path('customer/detail/<int:pk>/', CustomerDetailView.as_view(), name='customer_detail'),
+    path('customer/toggle-status/<int:pk>/', CustomerToggleStatusView.as_view(), name='customer_toggle_status'),
 
-    # -------- Club Members --------
-    path('club-member/', ClubMemberList.as_view(), name='club_member_list'),
-   
-    path('club-members/edit/<int:pk>/', ClubMemberEditView.as_view(), name='club_member_edit'),
-    path('club-members/toggle-status/<int:pk>/', ClubMemberToggleStatusView.as_view(), name='club_member_toggle_status'),
-    path('club-members/delete/<int:pk>/', ClubMemberDeleteView.as_view(), name='club_member_delete'),
 
-    # -------- Sub-Admins --------
-    path('sub-admin/', SubAdminList.as_view(), name='sub_admin_list'),
-    path('sub-admin/create/', SubAdminCreateView.as_view(), name='sub_admin_create'),
-    path('sub-admin/edit/<int:pk>/', SubAdminEditView.as_view(), name='sub_admin_edit'),
-    path('sub-admin/detail/<int:pk>/', SubAdminDetailView.as_view(), name='sub_admin_detail'),
-    path('sub-admin/toggle-status/<int:pk>/', SubAdminToggleStatusView.as_view(), name='sub_admin_toggle_status'),
-    path('sub-admin/delete/<int:pk>/', SubAdminDeleteView.as_view(), name='sub_admin_delete'),
 
     # -------- FAQ --------
     path('faq/', FAQView.as_view(), name='faq_list'),
@@ -75,6 +63,31 @@ urlpatterns = [
     path('cities/create/', CityCreateView.as_view(), name='city_create'),
     path('cities/edit/<int:pk>/', CityEditView.as_view(), name='city_edit'),
     path('cities/delete/<int:pk>/', CityDeleteView.as_view(), name='city_delete'),
+
+    # Product Category URLs
+    path('product-categories/', ProductCategoryListView.as_view(), name='product_category_list'),
+    path('product-categories/create/', ProductCategoryCreateView.as_view(), name='product_category_create'),
+    path('product-categories/edit/<int:pk>/', ProductCategoryEditView.as_view(), name='product_category_edit'),
+    path('product-categories/delete/<int:pk>/', ProductCategoryDeleteView.as_view(), name='product_category_delete'),
+
+    # Product URLs
+    path('products/', ProductListView.as_view(), name='product_list'),
+    path('products/create/', ProductCreateView.as_view(), name='product_create'),
+    path('products/edit/<int:pk>/',ProductEditView.as_view(), name='product_edit'),
+    path('products/delete/<int:pk>/', ProductDeleteView.as_view(), name='product_delete'),
+
+    # Customer Review URLs
+    path('customer-reviews/', CustomerReviewListView.as_view(), name='customer_review_list'),
+    path('customer-reviews/view/<int:pk>/', CustomerReviewDetailView.as_view(), name='customer_review_view'),
+    path('customer-reviews/edit/<int:pk>/', CustomerReviewEditView.as_view(), name='customer_review_edit'),
+    path('customer-reviews/delete/<int:pk>/', CustomerReviewDeleteView.as_view(), name='customer_review_delete'),
+    
+    # Contact Us URLs
+    path('contact-us/', ContactUsListView.as_view(), name='contact_us_list'),
+    path('contact-us/view/<int:pk>/', ContactUsDetailView.as_view(), name='contact_us_view'),
+    path('contact-us/edit/<int:pk>/', ContactUsEditView.as_view(), name='contact_us_edit'),
+    path('contact-us/delete/<int:pk>/', ContactUsDeleteView.as_view(), name='contact_us_delete'),
+
 ]
 
 # ================================

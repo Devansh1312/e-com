@@ -16,7 +16,7 @@
                             {% if user.card_header %}
                                 <img alt="Card Header" src="{{ user.card_header.url }}" class="card-header-img">
                             {% else %}
-                                <img alt="Default Card Header" src="{{  website_logo  }}" class="card-header-img">
+                                <img alt="Default Card Header" src="{{ website_logo }}" class="card-header-img">
                             {% endif %}
                         </div>
                         <div class="user-image">
@@ -27,15 +27,13 @@
                                     <img alt="Default Profile Picture" src="{% static 'assets/images/dashboard/User.png' %}" class="profile-pic-img">
                                 {% endif %}
                             </div>
-                            {% if request.user|has_permission:'edit_profile' %}
-                                <a href="{% url 'edit_profile' %}" class="icon-wrapper">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </a>
-                            {% endif %}
+                            <a href="{% url 'edit_profile' %}" class="icon-wrapper">
+                                <i class="fas fa-pencil-alt"></i>
+                            </a>
                         </div>
                         <div class="info">
                             <div class="user-designation text-center mb-4">
-                                <div class="title"><h3>{{ user.name }}</h3></div>
+                                <div class="title"><h3>{{ user.name|default:user.username }}</h3></div>
                                 <div class="desc text-muted">{{ user.role.name|default:"No Role" }}</div>
                             </div>
                             
@@ -60,10 +58,16 @@
                                                         <span>{{ user.last_name|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
-                                                <div class="col-12">
+                                                <div class="col-12 col-sm-6 col-lg-12">
                                                     <div class="ttl-info text-start">
                                                         <h6><i class="fas fa-venus-mars me-2"></i> Gender</h6>
                                                         <span>{{ user.gender|default:"Not specified" }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-lg-12">
+                                                    <div class="ttl-info text-start">
+                                                        <h6><i class="fas fa-birthday-cake me-2"></i> Date of Birth</h6>
+                                                        <span>{{ user.date_of_birth|date:"F d, Y"|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -83,6 +87,15 @@
                                                     <div class="ttl-info text-start">
                                                         <h6><i class="fas fa-envelope me-2"></i> Email</h6>
                                                         <span class="text-break">{{ user.email|default:"Not specified" }}</span>
+                                                        {% if user.email_verified_at %}
+                                                            <small class="text-success d-block mt-1">
+                                                                <i class="fas fa-check-circle me-1"></i>Verified
+                                                            </small>
+                                                        {% else %}
+                                                            <small class="text-warning d-block mt-1">
+                                                                <i class="fas fa-exclamation-circle me-1"></i>Not Verified
+                                                            </small>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                                 <div class="col-12 col-sm-6 col-lg-12">
@@ -91,12 +104,13 @@
                                                         <span>{{ user.phone|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
-                                                <div class="col-12">
+                                                <div class="col-12 col-sm-6 col-lg-12">
                                                     <div class="ttl-info text-start">
                                                         <h6><i class="fas fa-user-circle me-2"></i> Username</h6>
                                                         <span>{{ user.username }}</span>
                                                     </div>
                                                 </div>
+                                                <!--  -->
                                             </div>
                                         </div>
                                     </div>
@@ -122,7 +136,7 @@
                                                         <span>{{ user.state|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
-                                                <div class="col-12">
+                                                <div class="col-12 col-sm-6 col-lg-12">
                                                     <div class="ttl-info text-start">
                                                         <h6><i class="fas fa-city me-2"></i> Cities</h6>
                                                         <span>
@@ -136,54 +150,23 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Additional Information -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <h5><i class="fas fa-info-circle me-2"></i> Additional Information</h5>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row g-3">
-                                                <div class="col-12 col-md-4">
+                                                <div class="col-12 col-sm-6 col-lg-12">
                                                     <div class="ttl-info text-start">
-                                                        <h6><i class="fas fa-calendar-alt me-2"></i> Member Since</h6>
-                                                        <span>{{ user.created_at|date:"F d, Y" }}</span>
+                                                        <h6><i class="fas fa-home me-2"></i> Address</h6>
+                                                        <span class="text-break">{{ user.address|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
-                                                <div class="col-12 col-md-4">
+                                                <div class="col-12 col-sm-6 col-lg-12">
                                                     <div class="ttl-info text-start">
-                                                        <h6><i class="fas fa-sync-alt me-2"></i> Last Updated</h6>
-                                                        <span>{{ user.updated_at|date:"F d, Y" }}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-12 col-md-4">
-                                                    <div class="ttl-info text-start">
-                                                        <h6><i class="fas fa-bell me-2"></i> Notifications</h6>
-                                                        <span>
-                                                            {% if user.is_notification %}
-                                                                <span class="badge bg-success">
-                                                                    <i class="fas fa-check me-1"></i>Enabled
-                                                                </span>
-                                                            {% else %}
-                                                                <span class="badge bg-secondary">
-                                                                    <i class="fas fa-times me-1"></i>Disabled
-                                                                </span>
-                                                            {% endif %}
-                                                        </span>
+                                                        <h6><i class="fas fa-map-pin me-2"></i> Pincode</h6>
+                                                        <span>{{ user.pincode|default:"Not specified" }}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div>                            
                         </div>
                     </div>
                 </div>
@@ -221,6 +204,29 @@
     align-items: center;
     margin-top: -75px;
     margin-bottom: 20px;
+}
+
+.icon-wrapper {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    color: #7366ff;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.icon-wrapper:hover {
+    background: #7366ff;
+    color: white;
+    transform: scale(1.1);
 }
 
 .card {
@@ -303,7 +309,6 @@
     .user-image .avatar {
         margin-top: -65px;
     }
-    
 }
 
 @media (max-width: 767.98px) {
@@ -376,6 +381,11 @@
     .ttl-info span {
         font-size: 14px;
     }
+    
+    .icon-wrapper {
+        width: 35px;
+        height: 35px;
+    }
 }
 
 @media (max-width: 379.98px) {
@@ -391,7 +401,6 @@
     .user-image .avatar {
         margin-top: -40px;
     }
-    
     
     .user-designation .title h3 {
         font-size: 18px;

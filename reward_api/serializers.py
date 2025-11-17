@@ -66,11 +66,6 @@ class FAQSerializer(serializers.ModelSerializer):
         ret['created_at'] = instance.created_at.strftime("%Y-%m-%d %H:%M") if instance.created_at else None
         return ret
 
-class NotificationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notification
-        fields = '__all__'
-
 
 class SystemSettingsSerializer(serializers.ModelSerializer):
     class Meta:

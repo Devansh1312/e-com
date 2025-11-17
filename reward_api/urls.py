@@ -16,11 +16,6 @@ urlpatterns = [
     # -------------------- Dashboard --------------------
     path('api/dashboard/', DashboardAPI.as_view()),  # User dashboard data
 
-    # -------------------- Notifications --------------------
-    path('api/notifications/', NotificationAPIView.as_view()),  # Get notifications
-    path('api/delete-notification/', NotificationAPIView.as_view()),  # Delete a specific notification
-    path('api/delete-all-notifications/', NotificationAPIView.as_view()),  # Delete all notifications
-
     # -------------------- FAQs --------------------
     path('api/faq/', FAQListAPIView.as_view()),  # List FAQs
 

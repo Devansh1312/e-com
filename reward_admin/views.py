@@ -18,9 +18,10 @@ from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import View
 from django.views.generic import DeleteView
-from datetime import datetime, time
+from datetime import datetime
 from django.http import HttpResponseForbidden, HttpResponseBadRequest,Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 
 # =============================
 # Django Authentication & Auth
@@ -116,12 +117,9 @@ def LoginFormView(request):
     # If the user is already logged in, redirect to the dashboard
     if request.user.is_authenticated:
         # Redirect based on user role
-        if request.user.role.id in [1, 3]:
+        if request.user.role.id in [1]:
             return redirect('view_dashboard')
-        if request.user.role.id == 4:
-            return redirect('Attendance_Taker_Dashboard')
-        return redirect('view_dashboard')
-
+        
     if request.method == "POST":
         # Get form data directly from request.POST
         login_input = request.POST.get("phone")
@@ -140,16 +138,12 @@ def LoginFormView(request):
 
             if user is not None:
                 if user.is_active:
-                    if user.role_id in [1, 2, 3, 4]:  # All allowed roles
+                    if user.role_id in [1, 2]:  # All allowed roles
                         login(request, user)
                         if remember_me:
                             request.session.set_expiry(1209600)
                         messages.success(request, "Login Successful")
-                        
-                        # Redirect based on role
-                        if user.role_id == 4:
-                            return redirect("Attendance_Taker_Dashboard")
-                        return redirect("view_dashboard")
+                    
                     else:
                         messages.error(
                             request,
@@ -202,19 +196,10 @@ class Dashboard(LoginRequiredMixin, View):
         # Check if user is authenticated
         if not request.user.is_authenticated:
             return redirect('adminlogin')
+    
+                
+        total_customer_users = User.objects.filter(role_id=2).count()
         
-        # Redirect Ticket Scanners to their specific dashboard
-        if request.user.role and request.user.role.id == 4:
-            return redirect('Attendance_Taker_Dashboard')
-        
-        # Total Club Members (assuming role_id=3 are club members)
-        total_club_members = User.objects.filter(role_id=3).count()
-        
-        # Total Sub-Admins (assuming role_id=2 are sub-admins)
-        total_sub_admins = User.objects.filter(role_id=2).count()
-        
-        # Total Ticket Scanners (role_id=4)
-        total_attendance_takers = User.objects.filter(role_id=4).count()
 
 
         # ========================================
@@ -222,10 +207,7 @@ class Dashboard(LoginRequiredMixin, View):
         # ========================================
         
         context = {
-            # User Statistics
-            'total_club_members': total_club_members,
-            'total_sub_admins': total_sub_admins,
-            'total_attendance_takers': total_attendance_takers,
+            'total_customer_users': total_customer_users,
         }
         
         return render(request, "Admin/Dashboard.html", context)
@@ -237,195 +219,6 @@ def logout_view(request):
     logout(request)
     return redirect("adminlogin")
 
-
-############################################## List of Club Members ##############################################################
-class ClubMemberList(LoginRequiredMixin, View):
-    template_name = "Admin/User/Club_Member_List.html"
-
-    def get(self, request):
-        # Get parent members for dropdowns
-        parent_members = get_user_model().objects.filter(
-            role=3,  # Club members
-            parent__isnull=True  # Only parent members
-        ).order_by('name')
-        
-        return render(
-            request,
-            self.template_name,
-            {
-                "breadcrumb": {"child": "Club Member List"},
-                "parent_members": parent_members,
-            },
-        )
-
-    def post(self, request):
-        # Get DataTables parameters
-        draw = int(request.POST.get('draw', 1))
-        start = int(request.POST.get('start', 0))
-        length = int(request.POST.get('length', 10))
-        search_value = request.POST.get('search[value]', '')
-        
-        # Get sorting parameters
-        order_column_index = int(request.POST.get('order[0][column]', 0))
-        order_direction = request.POST.get('order[0][dir]', 'asc')
-        
-        # Map column index to model field
-        column_map = {
-            0: 'id',           # Counter (we'll sort by ID for consistent ordering)
-            1: 'membership_id',
-            2: 'name',
-            3: 'email',
-            4: 'phone',
-            # 5: status (not sortable)
-            # 6: actions (not sortable)
-        }
-        
-        # Get the custom user model
-        User = get_user_model()
-        
-        # Base queryset - all club members (role_id=3) with select_related for parent
-        queryset = User.objects.filter(role=3).select_related('parent')
-        
-        # Apply sorting if the column is sortable
-        if order_column_index in column_map:
-            order_field = column_map[order_column_index]
-            if order_direction == 'desc':
-                order_field = '-' + order_field
-            queryset = queryset.order_by(order_field)
-        else:
-            # Default ordering if no valid sort column specified
-            queryset = queryset.order_by('membership_id')
-        
-        # Apply search filter if provided
-        if search_value:
-            queryset = queryset.filter(
-                Q(username__icontains=search_value) |
-                Q(name__icontains=search_value) |
-                Q(email__icontains=search_value) |
-                Q(phone__icontains=search_value) |
-                Q(membership_id__icontains=search_value)
-            )
-
-        # If current user is not admin (role_id=1), filter by cities
-        if request.user.role.id != 1:
-            user_cities = request.user.cities.all()
-            if user_cities:
-                queryset = queryset.filter(cities__in=user_cities).distinct()
-            else:
-                queryset = User.objects.none()
-
-        # Get total records count (without filters)
-        if request.user.role.id != 1:
-            total_records = User.objects.filter(role=3, cities__in=request.user.cities.all()).count()
-        else:
-            total_records = User.objects.filter(role=3).count()
-        
-        # Get filtered count (with search filters applied)
-        filtered_records = queryset.count()
-        
-        # Apply pagination
-        members = queryset[start:start + length]
-        
-        # Prepare data for response
-        data = []
-        for index, member in enumerate(members):
-            status_badge = 'badge-success' if member.is_active else 'badge-danger'
-            status_text = 'Active' if member.is_active else 'Inactive'
-            
-            # Check permissions
-            can_edit = request.user.has_permission('club_member_edit')
-            can_delete = request.user.has_permission('club_member_delete')
-            can_toggle_status = request.user.has_permission('club_member_edit')
-            
-            # Build actions HTML based on permissions
-            actions_html = """
-            <div class="action-menu-container" style="position: relative; display: inline-block;">
-                <a href="#" class="three-dots-menu">
-                    <i class="fa fa-ellipsis-v"></i>
-                </a>
-                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-            """
-            
-            # Toggle status action
-            if can_toggle_status:
-                actions_html += f"""
-                        <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="#" class="toggle-status text-decoration-none" data-id="{member.id}" data-status="{'deactivate' if member.is_active else 'activate'}">
-                                {'Deactivate' if member.is_active else 'Activate'}
-                            </a>
-                            <form id="status-form-{member.id}" method="post" action="/club-members/toggle-status/{member.id}/" style="display: none;">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{get_token(request)}">
-                                <input type="hidden" name="source_page" value="club_member_list">
-                                <input type="hidden" name="title" value="Club Member">
-                            </form>
-                        </li>
-                """
-            
-            # View action
-            actions_html += f"""
-                        <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="/club-member/detail/{member.id}/" class="text-decoration-none">
-                                View
-                            </a>
-                        </li>
-            """
-            
-            # Edit action
-            if can_edit:
-                edit_url = reverse('club_member_edit', args=[member.id])
-                actions_html += f"""
-                    <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                        <a href="{edit_url}">
-                            Edit
-                        </a>
-                    </li>
-                """
-            
-            # Delete action
-            if can_delete:
-                actions_html += f"""
-                        <li style="padding: 8px 12px; font-size: small;">
-                            <a href="#" class="delete-member text-decoration-none" 
-                                data-id="{member.id}"
-                                data-toggle="modal" 
-                                data-target="#deleteClubMemberModal">
-                                Delete
-                            </a>
-                            <form id="delete-form-{member.id}" method="post" action="/club-members/delete/{member.id}/" style="display: none;">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{get_token(request)}">
-                                <input type="hidden" name="source_page" value="club_member_list">
-                                <input type="hidden" name="title" value="Club Member">
-                            </form>
-                        </li>
-                """
-            
-            actions_html += """
-                    </ul>
-                </div>
-            </div>
-            """
-            
-            data.append({
-                'counter': start + index + 1,
-                'membership_id': member.membership_id or 'N/A',
-                'name': member.name or 'N/A',
-                'email': member.email or 'N/A',
-                'phone': member.phone or 'N/A',
-                'status': f'<span class="badge {status_badge}">{status_text}</span>',
-                'actions': actions_html,
-                'parent_id': member.parent.id if member.parent else None,
-                'reward_points': member.presidencyclub_balance or 0
-            })
-        
-        response = {
-            'draw': draw,
-            'recordsTotal': total_records,
-            'recordsFiltered': filtered_records,
-            'data': data,
-        }
-        
-        return JsonResponse(response) 
 
 ################################## Send Welcome Email to Club Member #########################################
 def send_welcome_email(email, membership_id, name, password, system_settings, subject, request):
@@ -463,219 +256,6 @@ def send_welcome_email(email, membership_id, name, password, system_settings, su
     except Exception as e:
         return False
 
-################### Club Member Edit View #############################
-class ClubMemberEditView(LoginRequiredMixin, View):
-    template_name = "Admin/User/Club_Member_Edit.html"
-
-    def get(self, request, pk):
-        user = get_object_or_404(get_user_model(), pk=pk, role_id=3)
-        parent_members = get_user_model().objects.filter(
-            role=3,
-            parent__isnull=True
-        ).order_by('name')
-        genders = UserGender.objects.all()
-        countries = Country.objects.all()
-        states = State.objects.all()
-        
-        # Format dates properly for display
-        formatted_user = {
-            'date_of_birth': user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '',
-            'enrollment_date': user.enrollment_date.strftime('%Y-%m-%d') if user.enrollment_date else '',
-            'anniversary_date': user.anniversary_date.strftime('%Y-%m-%d') if user.anniversary_date else '',
-        }
-        
-        return render(
-            request,
-            self.template_name,
-            {
-                "breadcrumb": {"parent": "Club Member List", "child": "Edit Club Member"},
-                "member": user,
-                "formatted_dates": formatted_user,
-                "parent_members": parent_members,
-                "genders": genders,
-                "countries": countries,
-                "states": states,
-            },
-        )
-
-    def post(self, request, pk):
-        user = get_object_or_404(get_user_model(), pk=pk, role_id=3)
-        data = request.POST
-        errors = {}
-        parent_members = get_user_model().objects.filter(
-            role=3,
-            parent__isnull=True
-        ).order_by('name')
-        genders = UserGender.objects.all()
-        countries = Country.objects.all()
-        states = State.objects.all()
-        
-        # Validate required fields
-        required_fields = {
-            'first_name': 'First name is required',
-            'last_name': 'Last name is required',
-            'membership_id': 'Membership ID is required',
-            'email': 'Email is required',
-            'phone': 'Phone number is required',
-            'name': 'Full name is required',
-        }
-        
-        for field, error_msg in required_fields.items():
-            if not data.get(field):
-                errors[field] = [error_msg]
-        
-        # Membership ID validation
-        membership_id = data.get('membership_id')
-        if membership_id:
-            cleaned_membership_id = membership_id.strip().upper()
-            if get_user_model().objects.filter(membership_id=cleaned_membership_id).exclude(pk=user.pk).exists():
-                errors['membership_id'] = ['This membership ID is already taken']
-        
-        # Phone validation
-        phone = data.get('phone')
-        if phone:
-            cleaned_phone = phone.replace(" ", "").replace("-", "")
-            if cleaned_phone.startswith('+91'):
-                cleaned_phone = cleaned_phone[3:]
-            elif cleaned_phone.startswith('91') and len(cleaned_phone) > 10:
-                cleaned_phone = cleaned_phone[2:]
-
-            if not cleaned_phone.isdigit() or len(cleaned_phone) != 10:
-                errors['phone'] = ['Phone number must be exactly 10 digits']
-
-        # Email validation
-        email = data.get('email')
-        if email:
-            try:
-                validate_email(email)
-                if get_user_model().objects.filter(email=email).exclude(pk=user.pk).exists():
-                    errors['email'] = ['Email already exists']
-            except ValidationError:
-                errors['email'] = ['Enter a valid email address']
-        
-        # Track if password is being changed
-        password_changed = False
-        new_password = None
-        
-        # Password validation only if provided
-        if data.get('password') or data.get('confirm_password'):
-            if not data.get('password'):
-                errors['password'] = ['Password is required']
-            elif len(data.get('password')) < 8:
-                errors['password'] = ['Password must be at least 8 characters']
-            
-            if not data.get('confirm_password'):
-                errors['confirm_password'] = ['Please confirm your password']
-            elif data.get('password') != data.get('confirm_password'):
-                errors['confirm_password'] = ['Passwords do not match']
-            else:
-                password_changed = True
-                new_password = data.get('password')
-        
-        # Date validation
-        date_of_birth = data.get('date_of_birth')
-        enrollment_date = data.get('enrollment_date')
-        anniversary_date = data.get('anniversary_date')
-        
-        try:
-            if date_of_birth:
-                datetime.strptime(date_of_birth, '%Y-%m-%d')
-            if enrollment_date:
-                datetime.strptime(enrollment_date, '%Y-%m-%d')
-            if anniversary_date:
-                datetime.strptime(anniversary_date, '%Y-%m-%d')
-        except ValueError:
-            if date_of_birth:
-                errors['date_of_birth'] = ['Enter a valid date (YYYY-MM-DD)']
-            if enrollment_date:
-                errors['enrollment_date'] = ['Enter a valid date (YYYY-MM-DD)']
-            if anniversary_date:
-                errors['anniversary_date'] = ['Enter a valid date (YYYY-MM-DD)']
-        
-        parent_id = data.get('parent_id')
-        reward_points = data.get('reward_points', 0)
-        
-        if not parent_id and not reward_points.isdigit():
-            errors['reward_points'] = ['Please enter valid reward points']
-        elif not parent_id and int(reward_points) < 0:
-            errors['reward_points'] = ['Reward points cannot be negative']
-
-        if errors:
-            return render(
-                request,
-                self.template_name,
-                {
-                    "breadcrumb": {"parent": "Club Member List", "child": "Edit Club Member"},
-                    "member": user,
-                    "parent_members": parent_members,
-                    "genders": genders,
-                    "countries": countries,
-                    "states": states,
-                    "errors": errors,
-                    "form_data": data,
-                },
-            )
-        
-        try:
-            new_parent = get_user_model().objects.get(pk=parent_id) if parent_id else None
-            
-            # Update user details
-            user.first_name = data.get('first_name')
-            user.last_name = data.get('last_name')
-            user.membership_id = cleaned_membership_id if membership_id else user.membership_id
-            user.date_of_birth = date_of_birth if date_of_birth else user.date_of_birth
-            user.anniversary_date = anniversary_date if anniversary_date else user.anniversary_date
-            user.address = data.get('address', user.address)
-            user.email = email
-            user.phone = cleaned_phone if phone else user.phone
-            user.name = data.get('name')
-            user.gender_id = data.get('gender') if data.get('gender') else user.gender_id
-            user.enrollment_date = enrollment_date if enrollment_date else user.enrollment_date
-            user.parent = new_parent
-
-            # Update password if provided
-            if password_changed:
-                user.password = make_password(new_password)
-            
-            # Handle reward points if this is now a parent user
-            if not new_parent and reward_points:
-                if user.presidencyclub_balance != int(reward_points):
-                    difference = int(reward_points) - user.presidencyclub_balance
-                    user.presidencyclub_balance = int(reward_points)
-                    
-            user.save()
-            
-            # Send password change email if password was changed
-            if password_changed:
-                system_settings = SystemSettings.objects.first()
-                send_password_change_email(
-                    email=user.email,
-                    membership_id=user.membership_id,
-                    name=user.name,
-                    password=new_password,
-                    system_settings=system_settings,
-                    request=request
-                )
-
-            messages.success(request, 'Club member updated successfully')
-            return redirect('club_member_list')
-            
-        except Exception as e:
-            messages.error(request, f'Error updating club member: {str(e)}')
-            return render(
-                request,
-                self.template_name,
-                {
-                    "breadcrumb": {"parent": "Club Member List", "child": "Edit Club Member"},
-                    "member": user,
-                    "parent_members": parent_members,
-                    "genders": genders,
-                    "countries": countries,
-                    "states": states,
-                    "errors": {'general': [str(e)]},
-                    "form_data": data,
-                },
-            )
 
 def send_password_change_email(email, membership_id, name, password, system_settings, request):
     try:
@@ -712,73 +292,7 @@ def send_password_change_email(email, membership_id, name, password, system_sett
     except Exception as e:
         return False
 
-# Club Member Toggle Status View
-class ClubMemberToggleStatusView(View):
-    def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk, role_id=3)
-        try:
-            user.is_active = not user.is_active
-            user.save()
-            
-            status = "activated" if user.is_active else "deactivated"
-            messages.success(request, f'Club member {status} successfully')
-            return JsonResponse({
-                'success': True
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Error toggling status: {str(e)}'
-            }, status=500)
-
-##################################### Club Member Delete View ##############################################
-class ClubMemberDeleteView(DeleteView):
-    model = User
-    success_url = reverse_lazy('club_member_list')
-    
-    def post(self, request, *args, **kwargs):
-        """Handle POST request for deleting a club member and their children"""
-        self.object = self.get_object()
-        
-        try:
-            # Store member details before deletion
-            member_name = self.object.name
-            
-            # Delete all child members recursively
-            self.delete_children(self.object)
-            
-            # Delete the parent member
-            self.object.delete()
-            
-            # Set success message
-            success_msg = f"Member '{member_name}' and all associated members have been successfully deleted!"
-            messages.success(request, success_msg)
-            
-        except Exception as e:
-            # Set error message
-            error_msg = f"Error deleting member: {str(e)}"
-            messages.error(request, error_msg)
-        
-        # Always redirect to success URL
-        return redirect(self.success_url)
-    
-    def delete_children(self, user):
-        """Recursively delete all children of a user"""
-        children = User.objects.filter(parent=user)
-        for child in children:
-            # Recursively delete the child's children first
-            self.delete_children(child)
-            # Then delete the child
-            child.delete()
-    
-    def get(self, request, *args, **kwargs):
-        """Handle GET request - redirect with error message"""
-        error_msg = 'Invalid request method. Use POST to delete a member.'
-        messages.error(request, error_msg)
-        return redirect(self.success_url)
-
-
-################################## SytemSettings view #######################################################
+######################### SystemSettings view #######################################################
 class System_Settings(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         system_settings = SystemSettings.objects.first()
@@ -804,12 +318,7 @@ class System_Settings(LoginRequiredMixin, View):
         if not system_settings:
             system_settings = SystemSettings()
 
-        fs = FileSystemStorage(
-            location=os.path.join(settings.MEDIA_ROOT, "System_Settings")
-        )
-
         errors = {}
-        success = False
 
         try:
             # Handle file uploads
@@ -821,13 +330,30 @@ class System_Settings(LoginRequiredMixin, View):
             for field_name, field_label in file_fields.items():
                 if field_name in request.FILES:
                     field_file = request.FILES[field_name]
+                    
+                    # Validate file type
+                    allowed_extensions = ['jpg', 'jpeg', 'png', 'gif']
+                    file_extension = field_file.name.split('.')[-1].lower()
+                    
+                    if file_extension not in allowed_extensions:
+                        errors[field_name] = f"Only {', '.join(allowed_extensions)} files are allowed"
+                        continue
+                    
+                    # Validate file size (max 5MB)
+                    if field_file.size > 5 * 1024 * 1024:
+                        errors[field_name] = "File size must be less than 5MB"
+                        continue
+                    
                     current_file = getattr(system_settings, field_label, None)
 
                     # Remove old file if it exists
                     if current_file:
-                        old_file_path = os.path.join(settings.MEDIA_ROOT, current_file)
+                        old_file_path = os.path.join(settings.MEDIA_ROOT, str(current_file))
                         if os.path.isfile(old_file_path):
-                            os.remove(old_file_path)
+                            try:
+                                os.remove(old_file_path)
+                            except OSError:
+                                pass
 
                     # Generate a unique filename and store the file
                     file_extension = field_file.name.split(".")[-1]
@@ -840,56 +366,55 @@ class System_Settings(LoginRequiredMixin, View):
                     # Update the system_settings with the new file path
                     setattr(system_settings, field_label, image_path)
 
-            # Handle required fields
-            required_fields = {
-                "phone": "Phone number is required",
-            }
+            # Handle required phone field
+            phone = request.POST.get('phone', '').strip()
+            if not phone:
+                errors['phone'] = "Phone number is required"
+            else:
+                system_settings.phone = phone
 
-            for field, error_message in required_fields.items():
-                field_value = request.POST.get(field)
-                if not field_value:
-                    errors[field] = error_message
-                else:
-                    setattr(system_settings, field, field_value)
+            # Handle optional website_name field
+            website_name = request.POST.get('website_name', '').strip()
+            system_settings.website_name = website_name if website_name else None
 
-            # Handle optional fields
-            optional_fields = [
-                "email",
-                "club_address",
-                "office_address",
-                "website_name",
-                "gst_number",
-                "razorpay_key",
-                "razorpay_secret",
-            ]
+            # Handle optional email field with validation
+            email = request.POST.get('email', '').strip()
+            if email:
+                try:
+                    validate_email(email)
+                    system_settings.email = email
+                except DjangoValidationError:
+                    errors['email'] = "Please enter a valid email address"
+            else:
+                system_settings.email = None
 
-            for field in optional_fields:
-                field_value = request.POST.get(field)
-                setattr(system_settings, field, field_value)
+            # Handle optional address field
+            address = request.POST.get('address', '').strip()
+            system_settings.address = address if address else None
             
+            # Save if no errors
             if not errors:
                 system_settings.save()
-                success = True
                 messages.success(request, "System settings updated successfully.")
+                return redirect("System_Settings")
             else:
                 messages.error(request, "Please correct the errors below.")
 
         except Exception as e:
             messages.error(request, f"An error occurred: {str(e)}")
+            errors['general'] = str(e)
 
-        if errors:
-            return render(
-                request,
-                "Admin/System_Settings.html",
-                {
-                    "system_settings": system_settings,
-                    "MEDIA_URL": settings.MEDIA_URL,
-                    "breadcrumb": {"parent": "Admin", "child": "System Settings"},
-                    "errors": errors,
-                },
-            )
-        return redirect("System_Settings")
-
+        # Return form with errors
+        return render(
+            request,
+            "Admin/System_Settings.html",
+            {
+                "system_settings": system_settings,
+                "MEDIA_URL": settings.MEDIA_URL,
+                "breadcrumb": {"parent": "Admin", "child": "System Settings"},
+                "errors": errors,
+            },
+        )
 
 ##################################################### User Change Password View ###############################################################
 def change_password_ajax(request):
@@ -933,19 +458,21 @@ class UserProfileView(LoginRequiredMixin, View):
         return render(request, "Admin/User/User_Profile.html", {"user": user})
 
 
-##################################################### User Update Profile View ###############################################################
 class UserUpdateProfileView(View):
     def get(self, request, *args, **kwargs):
         countries = Country.objects.all()
         cities = City.objects.all()
+        user = request.user
+        genders = UserGender.objects.all()
         
         return render(
             request,
             "Admin/User/Edit_Profile.html",
             {
-                "user": request.user,
+                "user": user,
                 "countries": countries,
                 "cities": cities,
+                "genders": genders,
                 "errors": {},
                 "breadcrumb": {"parent": "Account", "child": "Edit Profile"},
             },
@@ -987,7 +514,7 @@ class UserUpdateProfileView(View):
         if user.role.id != 2:
             country_id = request.POST.get('country')
             state_id = request.POST.get('state')
-            cities_ids = request.POST.getlist('cities')
+            city_id = request.POST.get('city')  # Single city now
             
             if country_id:
                 try:
@@ -1011,27 +538,36 @@ class UserUpdateProfileView(View):
             else:
                 user.state = None
             
-            if cities_ids:
+            # Single city selection
+            if city_id:
                 try:
-                    cities = City.objects.filter(id__in=cities_ids)
-                    if cities.count() != len(cities_ids):
-                        errors['cities'] = ['One or more invalid cities selected']
+                    city = City.objects.get(id=city_id)
+                    # Validate that city belongs to selected state
+                    if user.state and city.state != user.state:
+                        errors['city'] = ['City does not belong to selected state']
                     else:
-                        # Validate that all cities belong to selected state
-                        if user.state:
-                            invalid_cities = cities.exclude(state=user.state)
-                            if invalid_cities.exists():
-                                errors['cities'] = ['One or more cities do not belong to selected state']
-                            else:
-                                user.cities.set(cities)
-                        else:
-                            errors['cities'] = ['Please select a state first']
-                except ValueError:
-                    errors['cities'] = ['Invalid cities selected']
+                        # Clear existing cities and add the selected one
+                        user.cities.clear()
+                        user.cities.add(city)
+                except (City.DoesNotExist, ValueError):
+                    errors['city'] = ['Invalid city selected']
             else:
                 user.cities.clear()
         
-        # Handle file uploads (keep your existing code)
+        # Additional fields from model
+        date_of_birth = request.POST.get('date_of_birth', '').strip()
+        if date_of_birth:
+            try:
+                user.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+            except ValueError:
+                errors['date_of_birth'] = ['Invalid date format. Use YYYY-MM-DD']
+        else:
+            user.date_of_birth = None
+        
+        user.address = request.POST.get('address', '').strip() or None
+        user.pincode = request.POST.get('pincode', '').strip() or None
+        
+        # Handle file uploads
         fs_profile = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, "profile_pics"))
         fs_card = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, "card_header"))
 
@@ -1063,7 +599,7 @@ class UserUpdateProfileView(View):
                 os.remove(old_path)
             user.profile_picture = None
 
-        # Handle card header (similar validation)
+        # Handle card header
         if "card_header" in request.FILES:
             card_header = request.FILES["card_header"]
             
@@ -1119,7 +655,6 @@ class UserUpdateProfileView(View):
                 "breadcrumb": {"parent": "Account", "child": "Edit Profile"},
             },
         )
-
 
 # Improved API endpoints with error handling
 def api_get_states(request):
@@ -1675,15 +1210,17 @@ def get_cities(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-class SubAdminList(LoginRequiredMixin, View):
-    template_name = "Admin/User/Sub_Admin_List.html"
+########################## Customer Views ###############################
+
+class CustomerUserListView(LoginRequiredMixin, View):
+    template_name = "Admin/User/Customer_List.html"
 
     def get(self, request):
         return render(
             request,
             self.template_name,
             {
-                "breadcrumb": {"child": "Sub Admin List"},
+                "breadcrumb": {"child": "Customer List"},
             },
         )
 
@@ -1700,21 +1237,20 @@ class SubAdminList(LoginRequiredMixin, View):
         
         # Map column index to model field
         column_map = {
-            0: 'id',           # Counter (we'll sort by ID for consistent ordering)
+            0: 'id',
             1: 'username',
-            2: 'name',
-            3: 'email',
-            4: 'phone',
-            # 5: cities (not sortable)
-            # 6: status (not sortable)
-            # 7: actions (not sortable)
+            2: 'first_name',
+            3: 'last_name',
+            4: 'email',
+            5: 'phone',
+            6: 'created_at',
         }
         
         # Get the custom user model
         User = get_user_model()
         
-        # Base queryset - all sub admins (role_id=2)
-        queryset = User.objects.filter(role=2)
+        # Base queryset - all customer users (assuming role_id=3 for customers)
+        queryset = User.objects.filter(role_id=3)
         
         # Apply sorting if the column is sortable
         if order_column_index in column_map:
@@ -1723,13 +1259,15 @@ class SubAdminList(LoginRequiredMixin, View):
                 order_field = '-' + order_field
             queryset = queryset.order_by(order_field)
         else:
-            # Default ordering if no valid sort column specified
-            queryset = queryset.order_by('name')
+            # Default ordering
+            queryset = queryset.order_by('-created_at')
         
         # Apply search filter if provided
         if search_value:
             queryset = queryset.filter(
                 Q(username__icontains=search_value) |
+                Q(first_name__icontains=search_value) |
+                Q(last_name__icontains=search_value) |
                 Q(name__icontains=search_value) |
                 Q(email__icontains=search_value) |
                 Q(phone__icontains=search_value)
@@ -1744,29 +1282,30 @@ class SubAdminList(LoginRequiredMixin, View):
                 queryset = User.objects.none()
 
         # Get total records count (without filters)
-        total_records = User.objects.filter(role=2).count()
+        total_records = User.objects.filter(role_id=3).count()
         
         # Get filtered count (with search filters applied)
         filtered_records = queryset.count()
         
         # Apply pagination
-        members = queryset[start:start + length]
+        customers = queryset[start:start + length]
         
         # Prepare data for response
         data = []
-        for index, member in enumerate(members):
-            status_badge = 'badge-success' if member.is_active else 'badge-danger'
-            status_text = 'Active' if member.is_active else 'Inactive'
+        for index, customer in enumerate(customers):
+            status_badge = 'badge-success' if customer.is_active else 'badge-danger'
+            status_text = 'Active' if customer.is_active else 'Inactive'
             
             # Get assigned cities
-            cities = ", ".join([city.name for city in member.cities.all()[:3]])
-            if member.cities.count() > 3:
-                cities += f" (+{member.cities.count() - 3} more)"
+            cities = ", ".join([city.name for city in customer.cities.all()[:2]])
+            if customer.cities.count() > 2:
+                cities += f" (+{customer.cities.count() - 2} more)"
+            
+            # Get full name
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or customer.name or 'N/A'
             
             # Check permissions
-            can_edit = request.user.has_permission('sub_admin_edit')
-            can_delete = request.user.has_permission('sub_admin_delete')
-            can_toggle_status = request.user.has_permission('sub_admin_edit')
+            can_toggle_status = request.user.has_permission('customer_edit')
             
             # Build actions HTML based on permissions
             actions_html = """
@@ -1782,48 +1321,20 @@ class SubAdminList(LoginRequiredMixin, View):
             if can_toggle_status:
                 actions_html += f"""
                         <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="#" class="toggle-status text-decoration-none" data-id="{member.id}" data-status="{'deactivate' if member.is_active else 'activate'}">
-                                {'Deactivate' if member.is_active else 'Activate'}
+                            <a href="#" class="toggle-status text-decoration-none" data-id="{customer.id}" data-status="{'deactivate' if customer.is_active else 'activate'}">
+                                {'Deactivate' if customer.is_active else 'Activate'}
                             </a>
-                            <form id="status-form-{member.id}" method="post" action="/sub-admin/toggle-status/{member.id}/" style="display: none;">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{get_token(request)}">
-                                <input type="hidden" name="source_page" value="sub_admin_list">
-                                <input type="hidden" name="title" value="Sub Admin">
-                            </form>
                         </li>
                 """
             
             # View action
             actions_html += f"""
-                        <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="/sub-admin/detail/{member.id}/" class="text-decoration-none">
+                        <li style="padding: 8px 12px; font-size: small;">
+                            <a href="/customer/detail/{customer.id}/" class="text-decoration-none">
                                 View
                             </a>
                         </li>
             """
-            
-            # Edit action
-            if can_edit:
-                actions_html += f"""
-                        <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="/sub-admin/edit/{member.id}/" class="text-decoration-none">
-                                Edit
-                            </a>
-                        </li>
-            """
-            
-            # Delete action
-            if can_delete:
-                actions_html += f"""
-                    <li>
-                        <a href="#" class="text-decoration-none delete-subadmin" 
-                            data-id="{member.id}"
-                            data-toggle="modal" 
-                            data-target="#deleteSubAdminModal">
-                            Delete
-                        </a>
-                    </li>
-                """
             
             actions_html += """
                     </ul>
@@ -1833,12 +1344,15 @@ class SubAdminList(LoginRequiredMixin, View):
             
             data.append({
                 'counter': start + index + 1,
-                'username': member.username or 'N/A',
-                'name': member.name or 'N/A',
-                'email': member.email or 'N/A',
-                'phone': member.phone or 'N/A',
+                'username': customer.username or 'N/A',
+                'first_name': customer.first_name or 'N/A',
+                'last_name': customer.last_name or 'N/A',
+                'full_name': full_name,
+                'email': customer.email or 'N/A',
+                'phone': customer.phone or 'N/A',
                 'cities': cities or 'N/A',
                 'status': f'<span class="badge {status_badge}">{status_text}</span>',
+                'created_at': customer.created_at.strftime('%Y-%m-%d %H:%M') if customer.created_at else 'N/A',
                 'actions': actions_html
             })
         
@@ -1851,651 +1365,61 @@ class SubAdminList(LoginRequiredMixin, View):
         
         return JsonResponse(response)
 
-######################################## Sub Admin Detail Page #################################################        
-class SubAdminDetailView(LoginRequiredMixin, View):
-    template_name = "Admin/User/SubAdmin_Detail.html"
+
+######################################## Customer Detail Page #################################################        
+class CustomerDetailView(LoginRequiredMixin, View):
+    template_name = "Admin/User/Customer_Detail.html"
 
     def get(self, request, pk):
         try:
-            user = User.objects.get(id=pk, role_id=2)  # Ensure it's a sub-admin
+            User = get_user_model()
+            customer = User.objects.get(id=pk, role_id=3)  # Ensure it's a customer
             
-            # Get basic information only
             return render(
                 request,
                 self.template_name,
                 {
-                    "user": user,
-                    "title": "Sub Admin Details",
+                    "customer": customer,
+                    "title": "Customer Details",
                 },
             )
         except User.DoesNotExist:
-            return redirect("sub_admin_list")
+            messages.error(request, 'Customer not found')
+            return redirect("customer_user_list")
 
     def post(self, request, pk):
         return self.get(request, pk)
-######################################### Sub Admin Create View ######################################################
-######################################### Sub Admin Create View ######################################################
-class SubAdminCreateView(View):
-    template_name = "Admin/User/Sub_Admin_Create.html"
-    
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
-    def get(self, request):
-        # Get all states for the dropdown
-        states = State.objects.all().order_by('name')
-        
-        context = {
-            'states': states,
-            'breadcrumb': {'child': 'Add Sub Admin'}
-        }
-        return render(request, self.template_name, context)
-    
-    def validate_phone(self, phone):
-        """Validate and clean phone number"""
-        if not phone:
-            return None, "Phone number is required"
-            
-        cleaned_phone = phone.replace(" ", "").replace("-", "")
-        
-        # Handle country code prefixes
-        if cleaned_phone.startswith('+91'):
-            cleaned_phone = cleaned_phone[3:]
-        elif cleaned_phone.startswith('91') and len(cleaned_phone) > 10:
-            cleaned_phone = cleaned_phone[2:]
-        
-        # Validate digits and length
-        if not cleaned_phone.isdigit() or len(cleaned_phone) != 10:
-            return None, "Phone number must be exactly 10 digits"
-            
-        # Check if phone already exists
-        if User.objects.filter(phone=cleaned_phone).exists():
-            return None, "Phone number already exists"
-            
-        return cleaned_phone, None
-    
-    def validate_form_data(self, data):
-        """Validate all form data and return errors if any"""
-        errors = {}
-        
-        # Name validation
-        if not data.get('name'):
-            errors['name'] = ['Name is required']
-        elif len(data.get('name', '')) > 50:  # Add reasonable length limit
-            errors['name'] = ['Name cannot exceed 50 characters']
-        
-        # Email validation
-        email = data.get('email')
-        if not email:
-            errors['email'] = ['Email is required']
-        else:
-            try:
-                validate_email(email)
-                if User.objects.filter(email=email).exists():
-                    errors['email'] = ['Email already exists']
-            except DjangoValidationError:
-                errors['email'] = ['Enter a valid email address']
-        
-        # Phone validation
-        phone = data.get('phone')
-        cleaned_phone, phone_error = self.validate_phone(phone)
-        if phone_error:
-            errors['phone'] = [phone_error]
-        
-        # State validation
-        state_id = data.get('state')
-        if not state_id:
-            errors['state'] = ['State is required']
-        else:
-            try:
-                State.objects.get(id=state_id)
-            except State.DoesNotExist:
-                errors['state'] = ['Invalid state selected']
-        
-        # Cities validation
-        cities = data.getlist('cities')
-        if not cities:
-            errors['cities'] = ['At least one city must be selected']
-        else:
-            # Validate that cities belong to the selected state
-            if state_id:
-                valid_city_ids = City.objects.filter(state_id=state_id).values_list('id', flat=True)
-                for city_id in cities:
-                    if int(city_id) not in valid_city_ids:
-                        errors['cities'] = ['Invalid city selection for the selected state']
-                        break
-        
-        # Password validation
-        password = data.get('password')
-        if not password:
-            errors['password'] = ['Password is required']
-        elif len(password) < 8:
-            errors['password'] = ['Password must be at least 8 characters']
-        
-        # Confirm password validation
-        confirm_password = data.get('confirm_password')
-        if not confirm_password:
-            errors['confirm_password'] = ['Please confirm your password']
-        elif password != confirm_password:
-            errors['confirm_password'] = ['Passwords do not match']
-        
-        return errors, cleaned_phone
-    
-    def create_subadmin_user(self, data, cleaned_phone):
-        """Create the subadmin user with provided data"""
-        return User.objects.create(
-            username=data.get('email'),
-            membership_id=data.get('email'),
-            email=data.get('email'),
-            name=data.get('name'),
-            phone=cleaned_phone,
-            password=make_password(data.get('password')),
-            role_id=2,  # Sub Admin role
-            country_id=1,  # Fixed country
-            state_id=data.get('state'),
-            register_type='Admin',  # Assuming admin created
-            is_active=True
-        )
-    
-    def post(self, request):
-        data = request.POST
-        
-        # Get states for re-rendering the form if there are errors
-        states = State.objects.all().order_by('name')
-        
-        # Validate form data
-        errors, cleaned_phone = self.validate_form_data(data)
-        
-        if errors:
-            # Return the form with errors displayed
-            return render(request, self.template_name, {
-                'states': states,
-                'breadcrumb': {'child': 'Add Sub Admin'},
-                'errors': errors,
-                'form_data': {
-                    'name': data.get('name'),
-                    'email': data.get('email'),
-                    'phone': data.get('phone'),
-                    'state': data.get('state'),
-                    'cities': data.getlist('cities'),
-                }
-            })
-        
-        try:
-            # Create the user
-            user = self.create_subadmin_user(data, cleaned_phone)
-            
-            # Add cities
-            cities = data.getlist('cities')
-            user.cities.set(cities)
-            
-            # Send welcome email
-            email_sent = self.send_welcome_email(user, data.get('password'))
-            if not email_sent:
-                # Log warning but don't fail the creation
-                pass  # You might want to add logging here
-            
-            messages.success(request, 'Sub admin created successfully')
-            return redirect('sub_admin_list')
-            
-        except Exception as e:
-            # If there's an error during creation, show it on the form
-            errors['general'] = [f'Error creating sub admin: {str(e)}']
-            return render(request, self.template_name, {
-                'states': states,
-                'breadcrumb': {'child': 'Add Sub Admin'},
-                'errors': errors,
-                'form_data': {
-                    'name': data.get('name'),
-                    'email': data.get('email'),
-                    'phone': data.get('phone'),
-                    'state': data.get('state'),
-                    'cities': data.getlist('cities'),
-                }
-            })
-    
-    def send_welcome_email(self, user, password):
-        """Send welcome email to the new subadmin"""
-        try:
-            system_settings = SystemSettings.objects.first()
-            logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
-            logo_url = f"{settings.MEDIA_DOMAIN}{logo}" if logo else ''
-            website_name = system_settings.website_name if system_settings else 'Baroda Presidency Club'
-            
-            # Prepare context for email template
-            context = {
-                'name': user.name,
-                'current_year': datetime.now().year,
-                'email': user.email,
-                'password': password,
-                'logo': logo_url,
-                'static_url': settings.STATIC_DOMAIN,
-                'website_name': website_name,
-                'login_url': settings.DOMAIN
-            }
-            
-            email_content = render_to_string('emails/subadmin_welcome_email.html', context)
-            
-            # Send the email
-            subject = 'Welcome as Sub Admin'
-            send_mail(
-                subject=subject,
-                message=f'Welcome {user.name} as Sub Admin to {website_name}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                html_message=email_content,
-                fail_silently=False,
-            )
-            return True
-            
-        except Exception as e:
-            # Log the error but don't break the user creation process
-            # You might want to add proper logging here
-            return False
 
-######################################### Sub Admin Edit View ######################################################
-class SubAdminEditView(View):
-    template_name = "Admin/User/Sub_Admin_Edit.html"
-    
-    def get(self, request, pk):
-        # Get the sub admin user
-        sub_admin = get_object_or_404(User, pk=pk, role_id=2)
-        
-        # Get all states for the dropdown
-        states = State.objects.all().order_by('name')
-        
-        return render(request, self.template_name, {
-            'sub_admin': sub_admin,
-            'states': states,
-            'breadcrumb': {'child': 'Edit Sub Admin'}
-        })
-    
+
+############################## Customer Toggle Status View ###################################
+class CustomerToggleStatusView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk, role_id=2)
-        data = request.POST
-        errors = {}
+        User = get_user_model()
+        customer = get_object_or_404(User, pk=pk, role_id=3)
         
-        # Validate required fields
-        if not data.get('name'):
-            errors['name'] = ['Name is required']
-        
-        if not data.get('email'):
-            errors['email'] = ['Email is required']
-        
-        phone = data.get('phone') or request.POST.get('phone')
-        if not phone:
-            errors['phone'] = ['Phone number is required']
-        else:
-            # Phone number validation (same as club member)
-            cleaned_phone = phone.replace(" ", "").replace("-", "")
-            if cleaned_phone.startswith('+91'):
-                cleaned_phone = cleaned_phone[3:]
-            elif cleaned_phone.startswith('91') and len(cleaned_phone) > 10:
-                cleaned_phone = cleaned_phone[2:]
-            if not cleaned_phone.isdigit() or len(cleaned_phone) != 10:
-                errors['phone'] = ['Phone number must be exactly 10 digits']
-        
-        if not data.get('state'):
-            errors['state'] = ['State is required']
-        
-        if not data.get('cities'):
-            errors['cities'] = ['At least one city must be selected']
-        
-        # Validate email format and uniqueness
-        try:
-            validate_email(data.get('email'))
-            if User.objects.filter(email=data.get('email')).exclude(pk=user.pk).exists():
-                errors['email'] = ['Email already exists']
-        except ValidationError:
-            errors['email'] = ['Enter a valid email address']
-        
-        # Password validation only if provided
-        if data.get('password') or data.get('confirm_password'):
-            if not data.get('password'):
-                errors['password'] = ['Password is required']
-            elif len(data.get('password')) < 8:
-                errors['password'] = ['Password must be at least 8 characters']
-            
-            if not data.get('confirm_password'):
-                errors['confirm_password'] = ['Please confirm your password']
-            elif data.get('password') != data.get('confirm_password'):
-                errors['confirm_password'] = ['Passwords do not match']
-        
-        if errors:
+        # Check permission
+        if not request.user.has_permission('customer_edit'):
             return JsonResponse({
                 'success': False,
-                'errors': errors,
-                'message': 'Please correct the errors below'
-            }, status=400)
+                'message': 'You do not have permission to perform this action'
+            }, status=403)
         
         try:
-            # Update user details
-            user.email = data.get('email')
-            user.username = data.get('email')  # Keep username in sync with email
-            user.membership_id = data.get('email')  # Keep membership_id in sync with email
-            user.name = data.get('name')
-            user.phone = cleaned_phone
-            user.state_id = data.get('state')
+            customer.is_active = not customer.is_active
+            customer.save()
             
-            # Update password if provided
-            if data.get('password'):
-                user.password = make_password(data.get('password'))
-            
-            user.save()
-            
-            # Update cities
-            cities = data.getlist('cities')
-            user.cities.set(cities)
-            
-            messages.success(request, 'Sub admin updated successfully')
+            status = "activated" if customer.is_active else "deactivated"
+            messages.success(request, f'Customer {status} successfully')
             return JsonResponse({
                 'success': True,
-                'redirect_url': reverse('sub_admin_list')
-            })
-            
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Error updating sub admin: {str(e)}'
-            }, status=400)
-
-
-
-############################## Sub Admin Toggle Status View ###################################
-class SubAdminToggleStatusView(View):
-    def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk, role_id=2)
-        try:
-            user.is_active = not user.is_active
-            user.save()
-            
-            status = "activated" if user.is_active else "deactivated"
-            messages.success(request, f'Sub admin {status} successfully')
-            return JsonResponse({
-                'success': True
+                'message': f'Customer {status} successfully'
             })
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': f'Error toggling status: {str(e)}'
             }, status=500)
-
-########################### Sub Admin Delete View #################################
-class SubAdminDeleteView(View):
-    def post(self, request, pk):
-        user = get_object_or_404(User, pk=pk, role_id=2)  # Assuming role_id=2 is for sub-admins
-        try:
-            email = user.email
-            user.delete()
-            messages.success(request, f'Sub admin deleted successfully')
-            return JsonResponse({
-                'success': True,
-                'message': 'Sub admin deleted successfully'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Error deleting sub admin: {str(e)}'
-            }, status=500)
         
-    
-################## Send OTP for Forgot Password Email ##################################
-def send_forgot_password_otp(email, otp, system_settings, subject, request, is_admin=False):
-    try:
-        logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
-        logo_url = f"{settings.MEDIA_DOMAIN}{logo}" if logo else ''
-        static_url = f"{settings.STATIC_DOMAIN}"
-        website_name = system_settings.website_name if system_settings else 'Presidency Club'
-        
-        # Prepare context for email template
-        context = {
-            'otp': otp,
-            'current_year': datetime.now().year,
-            'logo': logo_url,
-            'static_url': static_url,
-            'is_admin': is_admin,  # Add flag to identify admin emails
-            'website_name': website_name
-        }
-        
-        # Use different templates for admin vs regular users
-        template_name = 'emails/forgot_password_otp_admin.html'
-        email_content = render_to_string(template_name, context)
-        
-        # Send the email
-        send_mail(
-            subject=subject,
-            message=f'Your password reset OTP is: {otp}',  # Plain text fallback
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=email_content,
-            fail_silently=False,
-        )
-        return True
-        
-    except Exception as e:
-        return False
-    
-# Send OTP for Sub Admin Email
-class ForgotPasswordAdminView(View):
-    template_name = "Admin/Forgot_Password_Admin.html"
-    success_url_name = "verify_otp_admin"
-    fail_url_name = "Forgot_Password_Admin"
-
-    def get(self, request):
-        return render(request, self.template_name)
-
-    def post(self, request):
-        email = request.POST.get('email', '').strip()
-        
-        if not email:
-            messages.error(request, "Email address is required.")
-            return redirect(self.fail_url_name)
-
-        try:
-            user = User.objects.get(email=email, is_active=True, role_id__in=[1,2,4])
-            # Generate 6-digit OTP
-            otp = str(random.randint(100000, 999999))
-            user.otp = otp
-            user.otp_created_at = timezone.now()
-            user.save()
-
-            system_settings = SystemSettings.objects.first()
-            if not system_settings:
-                messages.error(request, "System error. Please contact support.")
-                return redirect(self.fail_url_name)
-            
-            subject = 'Admin Password Reset Verification Code'
-
-            email_sent = send_forgot_password_otp(
-                email=email,
-                otp=otp,
-                system_settings=system_settings,
-                subject=subject,
-                request=request,
-                is_admin=True  # Pass the admin flag
-            )
-        
-            # Production note: Uncomment the following lines to handle email sending errors
-            if email_sent:
-                request.session['reset_password_email'] = email
-                messages.success(request, "A verification code has been sent to your email.")
-                return redirect(self.success_url_name)
-            
-            # If email failed to send
-            user.otp = None
-            user.otp_created_at = None
-            user.save()
-            messages.error(request, "Failed to send verification email. Please try again.")
-            return redirect(self.fail_url_name)
-            
-        except User.DoesNotExist:
-            # Don't reveal whether user exists or not
-            messages.error(request, "If this email is registered, you'll receive a verification code.")
-            return redirect(self.fail_url_name)
-        except Exception as e:
-            print(f"Error in ForgotPasswordAdminView: {str(e)}")
-            messages.error(request, "An error occurred. Please try again.")
-            return redirect(self.fail_url_name)
-
-# Verify OTP for Forgot Password Email
-class VerifyOTPAdminView(View):
-    template_name = "Admin/Verify_OTP_Admin_Forgot_Password.html"
-    login_url_name = "reset_password_admin"  # Change this to your admin login URL name
-    otp_expiry_minutes = 10  # OTP expires after 10 minutes
-
-    def get(self, request, email=None):
-        # Check if email is in session (from forgot password flow)
-        email = email or request.session.get('reset_password_email')
-        if not email:
-            messages.error(request,"Password reset session expired. Please start again.")
-            return redirect('Forgot_Password_Admin')
-        
-        return render(request, self.template_name, {
-            'email': email,
-            'partial_email': self._obfuscate_email(email)
-        })
-
-    def post(self, request):
-        email = request.session.get('reset_password_email')
-        if not email:
-            messages.error(request, "Session expired. Please request a new OTP.")
-            return redirect('Forgot_Password_Admin')
-
-        # Try hidden field, fallback to combining from inputs
-        otp = request.POST.get('full_otp', '').strip()
-        if not otp:
-            otp = ''.join([request.POST.get(f'otp_{i}', '').strip() for i in range(1, 7)])
-
-        if not otp or len(otp) != 6 or not otp.isdigit():
-            messages.error(request, "Please enter a valid 6-digit OTP.")
-            return self._render_error_response(request, email)
-
-        try:
-            user = User.objects.get(
-                email=email,
-                is_active=True,
-                role_id__in=[1,2,4]  # Admin or Sub-Admin roles
-            )
-
-            if (user.otp != otp or 
-                not user.otp_created_at or
-                (timezone.now() - user.otp_created_at).total_seconds() > self.otp_expiry_minutes * 60):
-                messages.error(request, "Invalid or expired OTP. Please request a new one.")
-                request.session['reset_password_email'] = email  # Keep the email in session for retry
-                return self._render_error_response(request, email)
-
-            # OTP is valid - store verification in session
-            request.session['otp_verified'] = True
-            request.session['reset_user_id'] = str(user.id)
-            
-            # Clear the OTP after successful verification
-            user.otp = None
-            user.otp_created_at = None
-            user.save()
-
-            messages.success(request, "OTP verified successfully. You can now reset your password.")
-            return redirect(self.login_url_name)
-
-        except User.DoesNotExist:
-            messages.error(request, "User not found. Please try again.")
-            return redirect('Forgot_Password_Admin')
-        except Exception as e:
-            messages.error(request, "An error occurred. Please try again.")
-            return self._render_error_response(request, email)
-
-
-    def _render_error_response(self, request, email):
-        """Helper method to render the error response with the same context as get"""
-        
-        return render(request, self.template_name, {
-            'email': email,
-            'partial_email': self._obfuscate_email(email)
-        })
-
-    def _obfuscate_email(self, email):
-        """Helper method to partially obscure the email for display"""
-        if '@' not in email:
-            return email
-        name, domain = email.split('@', 1)
-        if len(name) > 3:
-            obscured = name[:2] + '*' * (len(name)-2) + '@' + domain
-        else:
-            obscured = name[0] + '*' * (len(name)-1) + '@' + domain
-        return obscured
-
-
-class ResetPasswordAdminView(View):
-    template_name = "Admin/Reset_Password_Admin.html"
-    success_url_name = "adminlogin"  # URL name for admin login
-    session_key = 'reset_user_id'
-
-    def get(self, request):
-        # Check if OTP was verified
-        if not request.session.get('otp_verified'):
-            messages.error(request, "OTP verification required first.")
-            return redirect('Forgot_Password_Admin')
-            
-        user_id = request.session.get(self.session_key)
-        if not user_id:
-            messages.error(request, "Session expired. Please start again.")
-            return redirect('Forgot_Password_Admin')
-
-        try:
-            user = User.objects.get(id=user_id, is_active=True)
-        except User.DoesNotExist:
-            messages.error(request, "User not found.")
-            return redirect('Forgot_Password_Admin')
-
-        
-        return render(request, self.template_name)
-
-    def post(self, request):
-        if not request.session.get('otp_verified'):
-            messages.error(request, "OTP verification required first.")
-            return redirect('Forgot_Password_Admin')
-
-        user_id = request.session.get(self.session_key)
-        if not user_id:
-            messages.error(request, "Session expired. Please start again.")
-            return redirect('Forgot_Password_Admin')
-
-        password = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
-
-        # Basic password validation
-        if not password or not confirm_password:
-            messages.error(request, "Please fill in all fields.")
-            return render(request, self.template_name)
-            
-        if password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-            return render(request, self.template_name)
-            
-        if len(password) < 8:
-            messages.error(request, "Password must be at least 8 characters.")
-            return render(request, self.template_name)
-
-        try:
-            user = User.objects.get(id=user_id, is_active=True)
-            user.password = make_password(password)
-            user.save()
-            
-            # Clear session variables
-            request.session.pop('otp_verified', None)
-            request.session.pop(self.session_key, None)
-            request.session.pop('reset_password_email', None)
-
-            messages.success(request, "Password changed successfully. Please login with your new password.")
-            return redirect(self.success_url_name)
-            
-        except User.DoesNotExist:
-            messages.error(request, "User not found.")
-            return redirect('Forgot_Password_Admin')
-        except Exception as e:
-            messages.error(request, "An error occurred. Please try again.")
-            return render(request, self.template_name)
-
-
 
 ######################################### FAQ CRUD #########################################
 class FAQView(LoginRequiredMixin, View):
@@ -2560,13 +1484,427 @@ class FAQDeleteView(LoginRequiredMixin, View):
         return redirect("faq_list")
 
 
+################### Product Category CRUD #########################################
+class ProductCategoryListView(View):
+    def get(self, request):
+        categories = product_category.objects.all().order_by('-created_at')
+        return render(request, 'Admin/Product/Category_List.html', {
+            'categories': categories,
+            'breadcrumb': {'child': 'Product Category Management'}
+        })
+
+class ProductCategoryCreateView(View):
+    def post(self, request):
+        name = request.POST.get('name')
+        status = 'status' in request.POST  # Checkbox
+
+        # Validation
+        if not name:
+            messages.error(request, "Category name is required")
+            return redirect('product_category_list')
+
+        if product_category.objects.filter(name=name).exists():
+            messages.error(request, "Category name already exists")
+            return redirect('product_category_list')
+
+        try:
+            category = product_category.objects.create(
+                name=name,
+                status=status
+            )
+            messages.success(request, "Product category created successfully")
+
+        except Exception as e:
+            messages.error(request, f"Error creating category: {str(e)}")
+
+        return redirect('product_category_list')
+
+class ProductCategoryEditView(View):
+    def get(self, request, pk):
+        category = get_object_or_404(product_category, pk=pk)
+        return JsonResponse({
+            'id': category.id,
+            'name': category.name,
+            'status': category.status,
+            'created_at': category.created_at.strftime('%Y-%m-%d %H:%M') if category.created_at else None,
+            'updated_at': category.updated_at.strftime('%Y-%m-%d %H:%M') if category.updated_at else None
+        })
+    
+    def post(self, request, pk):
+        category = get_object_or_404(product_category, pk=pk)
+        
+        name = request.POST.get('name')
+        status = 'status' in request.POST
+        
+        # Validation
+        if not name:
+            messages.error(request, "Category name is required")
+            return redirect('product_category_list')
+            
+        # Check if category name already exists (excluding current category)
+        if product_category.objects.filter(name=name).exclude(pk=pk).exists():
+            messages.error(request, "Category name already exists")
+            return redirect('product_category_list')
+        
+        try:
+            category.name = name
+            category.status = status
+            category.save()
+            messages.success(request, "Product category updated successfully")
+        except Exception as e:
+            messages.error(request, f"Error updating category: {str(e)}")
+        
+        return redirect('product_category_list')
+
+class ProductCategoryDeleteView(View):
+    def post(self, request, pk):
+        category = get_object_or_404(product_category, pk=pk)
+        try:
+            category.delete()
+            messages.success(request, "Product category deleted successfully")
+        except Exception as e:
+            messages.error(request, f"Error deleting category: {str(e)}")
+        
+        return redirect('product_category_list')
 
 
-########################## Brand Tie-Up Management Views ###########################################
-def generate_unique_filename(prefix, extension):
-    """Generate a unique filename with timestamp"""
-    import uuid
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_id = uuid.uuid4().hex[:8]
-    return f"{prefix}_{timestamp}_{unique_id}.{extension}"
+
+
+class ProductListView(View):
+    def get(self, request):
+        products = product.objects.all().select_related('category').prefetch_related('images').order_by('-created_at')
+        categories = product_category.objects.filter(status=True)
+        return render(request, 'Admin/Product/Product_List.html', {
+            'products': products,
+            'categories': categories,
+            'breadcrumb': {'child': 'Product Management'}
+        })
+
+class ProductCreateView(View):
+    def post(self, request):
+        name = request.POST.get('name')
+        category_id = request.POST.get('category')
+        description = request.POST.get('description')
+        MRP = request.POST.get('MRP')
+        sale_price = request.POST.get('sale_price')
+        url = request.POST.get('url')
+        status = 'status' in request.POST
+        image_files = request.FILES.getlist('images')
+
+        # Validation
+        if not name:
+            messages.error(request, "Product name is required")
+            return redirect('product_list')
+
+        if not category_id:
+            messages.error(request, "Category is required")
+            return redirect('product_list')
+
+        try:
+            with transaction.atomic():
+                # Create product
+                product_obj = product.objects.create(
+                    name=name,
+                    category_id=category_id,
+                    description=description,
+                    MRP=MRP if MRP else None,
+                    sale_price=sale_price if sale_price else None,
+                    url=url,
+                    status=status
+                )
+
+                # Handle multiple image uploads
+                for image_file in image_files:
+                    if image_file:
+                        # Validate file type
+                        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                        if image_file.content_type not in allowed_types:
+                            continue  # Skip invalid files
+                        
+                        if image_file.size > 5 * 1024 * 1024:  # 5MB limit
+                            continue  # Skip files that are too large
+
+                        # Generate unique filename
+                        ext = os.path.splitext(image_file.name)[1]
+                        unique_filename = generate_unique_filename(f"product_{product_obj.id}", ext.lstrip("."))
+                        file_path = os.path.join("product_images", unique_filename)
+                        
+                        # Save file
+                        default_storage.save(file_path, image_file)
+                        
+                        # Create product image record
+                        product_image.objects.create(
+                            product=product_obj,
+                            image=file_path
+                        )
+
+                messages.success(request, "Product created successfully")
+
+        except Exception as e:
+            messages.error(request, f"Error creating product: {str(e)}")
+
+        return redirect('product_list')
+
+class ProductEditView(View):
+    def get(self, request, pk):
+        product_obj = get_object_or_404(product, pk=pk)
+        images = product_obj.images.all()
+        
+        return JsonResponse({
+            'id': product_obj.id,
+            'name': product_obj.name,
+            'category_id': product_obj.category.id,
+            'description': product_obj.description,
+            'MRP': str(product_obj.MRP) if product_obj.MRP else '',
+            'sale_price': str(product_obj.sale_price) if product_obj.sale_price else '',
+            'url': product_obj.url,
+            'status': product_obj.status,
+            'images': [
+                {
+                    'id': img.id,
+                    'url': img.image.url if img.image else None,
+                    'name': os.path.basename(img.image.name) if img.image else None
+                } for img in images
+            ]
+        })
+    
+    def post(self, request, pk):
+        product_obj = get_object_or_404(product, pk=pk)
+        
+        name = request.POST.get('name')
+        category_id = request.POST.get('category')
+        description = request.POST.get('description')
+        MRP = request.POST.get('MRP')
+        sale_price = request.POST.get('sale_price')
+        url = request.POST.get('url')
+        status = 'status' in request.POST
+        new_images = request.FILES.getlist('new_images')
+        delete_images = request.POST.getlist('delete_images')
+
+        # Validation
+        if not name:
+            messages.error(request, "Product name is required")
+            return redirect('product_list')
+
+        if not category_id:
+            messages.error(request, "Category is required")
+            return redirect('product_list')
+
+        try:
+            with transaction.atomic():
+                # Update product
+                product_obj.name = name
+                product_obj.category_id = category_id
+                product_obj.description = description
+                product_obj.MRP = MRP if MRP else None
+                product_obj.sale_price = sale_price if sale_price else None
+                product_obj.url = url
+                product_obj.status = status
+                product_obj.save()
+
+                # Delete selected images
+                for image_id in delete_images:
+                    try:
+                        img = product_image.objects.get(id=image_id, product=product_obj)
+                        if img.image:
+                            if default_storage.exists(img.image.name):
+                                default_storage.delete(img.image.name)
+                        img.delete()
+                    except product_image.DoesNotExist:
+                        continue
+
+                # Add new images
+                for image_file in new_images:
+                    if image_file:
+                        # Validate file type
+                        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                        if image_file.content_type not in allowed_types:
+                            continue
+                        
+                        if image_file.size > 5 * 1024 * 1024:  # 5MB limit
+                            continue
+
+                        # Generate unique filename
+                        ext = os.path.splitext(image_file.name)[1]
+                        
+                        unique_filename = generate_unique_filename(f"product_{product_obj.id}", ext.lstrip("."))
+                        file_path = os.path.join("product_images", unique_filename)
+                        
+                        # Save file
+                        default_storage.save(file_path, image_file)
+                        
+                        # Create product image record
+                        product_image.objects.create(
+                            product=product_obj,
+                            image=file_path
+                        )
+
+                messages.success(request, "Product updated successfully")
+        except Exception as e:
+            messages.error(request, f"Error updating product: {str(e)}")
+        
+        return redirect('product_list')
+
+class ProductDeleteView(View):
+    def post(self, request, pk):
+        product_obj = get_object_or_404(product, pk=pk)
+        try:
+            # Delete all associated images
+            images = product_obj.images.all()
+            for img in images:
+                if img.image:
+                    if default_storage.exists(img.image.name):
+                        default_storage.delete(img.image.name)
+                img.delete()
+            
+            product_obj.delete()
+            messages.success(request, "Product deleted successfully")
+        except Exception as e:
+            messages.error(request, f"Error deleting product: {str(e)}")
+        
+        return redirect('product_list')
+
+class CustomerReviewListView(View):
+    def get(self, request):
+        reviews = customer_review.objects.all().select_related('product', 'customer').order_by('-created_at')
+        return render(request, 'Admin/Review/Review_List.html', {
+            'reviews': reviews,
+            'breadcrumb': {'child': 'Customer Reviews Management'}
+        })
+
+class CustomerReviewDetailView(View):
+    def get(self, request, pk):
+        review = get_object_or_404(customer_review, pk=pk)
+        return JsonResponse({
+            'id': review.id,
+            'product_name': review.product.name,
+            'customer_name': review.customer.name or review.customer.username,
+            'customer_email': review.customer.email,
+            'rating': review.rating,
+            'review': review.review,
+            'created_at': review.created_at.strftime('%Y-%m-%d %H:%M') if review.created_at else None,
+            'updated_at': review.updated_at.strftime('%Y-%m-%d %H:%M') if review.updated_at else None
+        })
+
+class CustomerReviewEditView(View):
+    def get(self, request, pk):
+        review = get_object_or_404(customer_review, pk=pk)
+        return JsonResponse({
+            'id': review.id,
+            'rating': review.rating,
+            'review': review.review
+        })
+    
+    def post(self, request, pk):
+        review = get_object_or_404(customer_review, pk=pk)
+        
+        rating = request.POST.get('rating')
+        review_text = request.POST.get('review')
+        
+        # Validation
+        if not rating:
+            messages.error(request, "Rating is required")
+            return redirect('customer_review_list')
+        
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                messages.error(request, "Rating must be between 1 and 5")
+                return redirect('customer_review_list')
+        except ValueError:
+            messages.error(request, "Rating must be a valid number")
+            return redirect('customer_review_list')
+        
+        try:
+            review.rating = rating
+            review.review = review_text
+            review.save()
+            messages.success(request, "Review updated successfully")
+        except Exception as e:
+            messages.error(request, f"Error updating review: {str(e)}")
+        
+        return redirect('customer_review_list')
+
+class CustomerReviewDeleteView(View):
+    def post(self, request, pk):
+        review = get_object_or_404(customer_review, pk=pk)
+        try:
+            review.delete()
+            messages.success(request, "Review deleted successfully")
+        except Exception as e:
+            messages.error(request, f"Error deleting review: {str(e)}")
+        
+        return redirect('customer_review_list')
+
+class ContactUsListView(View):
+    def get(self, request):
+        contacts = contact_us.objects.all().order_by('-created_at')
+        return render(request, 'Admin/Contact/Contact_List.html', {
+            'contacts': contacts,
+            'breadcrumb': {'child': 'Contact Us Messages'}
+        })
+
+class ContactUsDetailView(View):
+    def get(self, request, pk):
+        contact_msg = get_object_or_404(contact_us, pk=pk)
+        return JsonResponse({
+            'id': contact_msg.id,
+            'name': contact_msg.name,
+            'email': contact_msg.email,
+            'subject': contact_msg.subject,
+            'message': contact_msg.message,
+            'created_at': contact_msg.created_at.strftime('%Y-%m-%d %H:%M') if contact_msg.created_at else None,
+            'updated_at': contact_msg.updated_at.strftime('%Y-%m-%d %H:%M') if contact_msg.updated_at else None
+        })
+
+class ContactUsEditView(View):
+    def get(self, request, pk):
+        contact_msg = get_object_or_404(contact_us, pk=pk)
+        return JsonResponse({
+            'id': contact_msg.id,
+            'name': contact_msg.name,
+            'email': contact_msg.email,
+            'subject': contact_msg.subject,
+            'message': contact_msg.message
+        })
+    
+    def post(self, request, pk):
+        contact_msg = get_object_or_404(contact_us, pk=pk)
+        
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        
+        # Validation
+        if not name:
+            messages.error(request, "Name is required")
+            return redirect('contact_us_list')
+        
+        if not email:
+            messages.error(request, "Email is required")
+            return redirect('contact_us_list')
+        
+        try:
+            contact_msg.name = name
+            contact_msg.email = email
+            contact_msg.subject = subject
+            contact_msg.message = message
+            contact_msg.save()
+            messages.success(request, "Contact message updated successfully")
+        except Exception as e:
+            messages.error(request, f"Error updating contact message: {str(e)}")
+        
+        return redirect('contact_us_list')
+
+class ContactUsDeleteView(View):
+    def post(self, request, pk):
+        contact_msg = get_object_or_404(contact_us, pk=pk)
+        try:
+            contact_msg.delete()
+            messages.success(request, "Contact message deleted successfully")
+        except Exception as e:
+            messages.error(request, f"Error deleting contact message: {str(e)}")
+        
+        return redirect('contact_us_list')
+

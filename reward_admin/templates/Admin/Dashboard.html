@@ -236,30 +236,17 @@
         
         <!-- User Statistics -->
         <div class="row g-3">
-            <div class="col-6 col-sm-6 col-md-3">
-                <a href="{% url 'club_member_list' %}">
-                    <div class="stats-card animate__animated animate__fadeIn" data-delay="100">
-                        <div class="stats-icon">
-                            <img src="{% static 'assets/images/dashboard/club-members.png' %}" alt="Club Members">
-                        </div>
-                        <div class="stats-content">
-                            <div class="stats-number">{{ total_club_members }}</div>
-                            <div class="stats-label">Club Members</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
             
-            <!-- Sub-Admins -->
+            <!-- Customer Users -->
             <div class="col-6 col-sm-6 col-md-3">
-                <a href="{% url 'sub_admin_list' %}">
+                <a href="{% url 'customer_user_list' %}">
                     <div class="stats-card animate__animated animate__fadeIn" data-delay="200">
                         <div class="stats-icon">
                             <img src="{% static 'assets/images/dashboard/sub-admins.png' %}" alt="Sub-Admins">
                         </div>
                         <div class="stats-content">
-                            <div class="stats-number">{{ total_sub_admins }}</div>
-                            <div class="stats-label">Sub-Admins</div>
+                            <div class="stats-number">{{ total_customer_users }}</div>
+                            <div class="stats-label">Customer Users</div>
                         </div>
                     </div>
                 </a>

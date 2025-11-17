@@ -1,287 +1,362 @@
 {% extends 'base.html' %} 
 {% load static %} 
 {% load sass_tags %} 
+
 {% block css %}
+<style>
+    .form-label {
+        font-weight: 500;
+        color: #333;
+    }
+    .section-divider {
+        border-top: 2px solid #e9ecef;
+        margin: 20px 0;
+    }
+    .section-title {
+        color: #7366ff;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    .image-preview {
+        margin-top: 10px;
+        border: 1px solid #e9ecef;
+        padding: 5px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .card {
+        box-shadow: 0 0 20px rgba(0,0,0,0.08);
+    }
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    .invalid-feedback {
+        display: block;
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+</style>
 {% endblock %}
+
 {% block title %}System Settings{% endblock %} 
+
 {% block content %} 
 {% include "components/loader.html" %}
+
 <div class="page-body">
-   <div class="container-fluid">
-      <div class="page-title">
-         <div class="row">
-            <div class="col-6">
-               <h3>{{ breadcrumb.child }}</h3>
-            </div>
-            <div class="col-6"></div>
-         </div>
-     </div>
-    <div class="row" style="margin-top: 10px; margin-bottom: 10px ; ">
-     </div>
-    <div class="card">
-         <form class="form theme-form" method="post" enctype="multipart/form-data"> 
-            {% csrf_token %} 
-            <div class="card-body">
-               <div class="row mb-3">
-                  <h4 class="col-12">Basic Website Settings</h4>
-               </div>
-               <div style="border-top: 1px solid #ccc; margin-top: 5px; margin-bottom: 20px;"></div>
-               <div class="row">
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="website_name">Website Name</label>
-                        <input class="form-control btn-pill" id="website_name" name="website_name" type="text" 
-                               value="{{ system_settings.website_name }}" placeholder="Website Name">
-                     </div>
-                  </div>
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12">
+                    <h3>{{ breadcrumb.child }}</h3>
                 </div>
-               <!-- Phone Number -->
-               <div class="row">
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="phone">Phone Number</label>
-                        <textarea class="form-control btn-pill {% if errors.phone %}is-invalid{% endif %}" 
-                               id="phone" name="phone" rows="2"
-                               placeholder="Phone Number" required>{{ system_settings.phone }}</textarea>
-                        {% if errors.phone %} 
-                        <div class="invalid-feedback">{{ errors.phone }}</div> 
-                        {% endif %}
-                     </div>
-                  </div>
-                  <!-- Email Address -->
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="email">Email Address</label>
-                        <textarea class="form-control btn-pill {% if errors.email %}is-invalid{% endif %}" 
-                               id="email" name="email" rows="2"
-                               placeholder="Email Address">{{ system_settings.email }}</textarea>
-                        {% if errors.email %} 
-                        <div class="invalid-feedback">{{ errors.email }}</div> 
-                        {% endif %}
-                     </div>
-                  </div>
-               </div>
-               <!-- Club Address -->
-               <div class="row">
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="club_address">Club Address</label>
-                        <textarea class="form-control btn-pill" id="club_address" name="club_address" 
-                                  rows="3" placeholder="Club Address">{{ system_settings.club_address }}</textarea>
-                     </div>
-                  </div>
-                  <!-- Office Address -->
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="office_address">Office Address</label>
-                        <textarea class="form-control btn-pill" id="office_address" name="office_address" 
-                                  rows="3" placeholder="Office Address">{{ system_settings.office_address }}</textarea>
-                     </div>
-                  </div>
-               </div>
-               <div class="row" style="margin-bottom: 10px;">
-                  <h4>Website Logos</h4>
-               </div>
-               <div style="border-top: 1px solid #ccc; margin-top: 5px; margin-bottom: 20px;"></div>
-               <!-- Favicon -->
-               <div class="row">
-                  <div class="col-12 col-md-4">
-                     <div class="mb-3">
-                        <label class="form-label" for="fav_icon">Fav Icon (64x64 px)</label>
-                        <input class="form-control btn-pill" id="fav_icon" name="fav_icon" type="file"> 
-                        {% if system_settings.fav_icon %} 
-                        <img src="{{ MEDIA_URL }}{{ system_settings.fav_icon }}" alt="Fav Icon" style="width: 35px; height: 35px; margin-top: 10px;"> 
-                        {% endif %}
-                     </div>
-                  </div>
-                  <!-- Website Logo -->
-                  <div class="col-12 col-md-4">
-                     <div class="mb-3">
-                        <label class="form-label" for="website_logo">Website Logo</label>
-                        <input class="form-control btn-pill" id="website_logo" name="website_logo" type="file"> 
-                        {% if system_settings.website_logo %} 
-                        <img src="{{ MEDIA_URL }}{{ system_settings.website_logo }}" alt="Website Logo" style="max-width: 200px; max-height: 100px; margin-top: 10px;"> 
-                        {% endif %}
-                     </div>
-                  </div>
-               </div>
-               <div class="row" style="margin-bottom: 10px;">
-                  <h4>Other Settings</h4>
-               </div>
-               <div class="row">
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="gst_number">GST Number</label>
-                        <input class="form-control btn-pill" id="gst_number" name="gst_number" type="text" 
-                               value="{{ system_settings.gst_number }}" placeholder="GST Number">
-                     </div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="rupees_to_presidencyclub_points">Rupees to Reward Points</label>
-                        <input class="form-control btn-pill" id="rupees_to_presidencyclub_points" name="rupees_to_presidencyclub_points" type="number" 
-                               value="{{ system_settings.rupees_to_presidencyclub_points }}" placeholder="Rupees to Reward Points" min="1">
-                     </div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="user_reffer_points">User Reffral Points</label>
-                        <input class="form-control btn-pill" id="user_reffer_points" name="user_reffer_points" type="number" 
-                               value="{{ system_settings.user_reffer_points }}" placeholder="User Reffer Points" min="0">
-                               {% if errors.user_reffer_points %} 
-                        <div class="invalid-feedback">{{ errors.user_reffer_points }}</div> 
-                        {% endif %}
-                     </div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="razorpay_key">Razorpay Key</label>
-                        <input class="form-control btn-pill" id="razorpay_key" name="razorpay_key" type="text" 
-                               value="{{ system_settings.razorpay_key }}" placeholder="Razorpay Key">
-                     </div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                     <div class="mb-3">
-                        <label class="form-label" for="razorpay_secret">Razorpay Secret</label>
-                        <input class="form-control btn-pill" id="razorpay_secret" name="razorpay_secret" type="text" 
-                               value="{{ system_settings.razorpay_secret }}" placeholder="Razorpay Secret">
-                     </div>
-                  </div>
-               </div>
             </div>
-            <div class="card-footer text-end">
-               <button class="btn btn-primary" type="submit">Save</button>
-               <input class="btn btn-light" type="reset" value="Cancel">
-            </div>
-         </form>
-      </div>
-   </div>
+        </div>
+
+        <div class="card">
+            <form class="form theme-form" method="post" enctype="multipart/form-data" id="systemSettingsForm"> 
+                {% csrf_token %} 
+                
+                <div class="card-body">
+                    <!-- Basic Website Settings -->
+                    <div class="row mb-3">
+                        <h4 class="col-12 section-title">
+                            <i class="fa fa-globe me-2"></i>Basic Website Settings
+                        </h4>
+                    </div>
+                    <div class="section-divider"></div>
+
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="website_name">
+                                    Website Name
+                                </label>
+                                <input class="form-control btn-pill {% if errors.website_name %}is-invalid{% endif %}" 
+                                       id="website_name" 
+                                       name="website_name" 
+                                       type="text" 
+                                       value="{{ system_settings.website_name|default:'' }}" 
+                                       placeholder="Enter website name">
+                                {% if errors.website_name %} 
+                                <div class="invalid-feedback">{{ errors.website_name }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="phone">
+                                    Phone Number <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control btn-pill {% if errors.phone %}is-invalid{% endif %}" 
+                                          id="phone" 
+                                          name="phone" 
+                                          rows="2"
+                                          placeholder="Enter phone number(s)" 
+                                          required>{{ system_settings.phone|default:'' }}</textarea>
+                                <small class="help-text">You can enter multiple phone numbers, one per line</small>
+                                {% if errors.phone %} 
+                                <div class="invalid-feedback">{{ errors.phone }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="email">
+                                    Email Address
+                                </label>
+                                <textarea class="form-control btn-pill {% if errors.email %}is-invalid{% endif %}" 
+                                          id="email" 
+                                          name="email" 
+                                          rows="2"
+                                          placeholder="Enter email address(es)">{{ system_settings.email|default:'' }}</textarea>
+                                <small class="help-text">You can enter multiple email addresses, one per line</small>
+                                {% if errors.email %} 
+                                <div class="invalid-feedback">{{ errors.email }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label" for="address">
+                                    Address
+                                </label>
+                                <textarea class="form-control btn-pill {% if errors.address %}is-invalid{% endif %}" 
+                                          id="address" 
+                                          name="address" 
+                                          rows="3" 
+                                          placeholder="Enter address">{{ system_settings.address|default:'' }}</textarea>
+                                {% if errors.address %} 
+                                <div class="invalid-feedback">{{ errors.address }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Website Logos -->
+                    <div class="row mb-3 mt-4">
+                        <h4 class="col-12 section-title">
+                            <i class="fa fa-image me-2"></i>Website Logos
+                        </h4>
+                    </div>
+                    <div class="section-divider"></div>
+
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="fav_icon">
+                                    Favicon (64x64 px)
+                                </label>
+                                <input class="form-control btn-pill {% if errors.fav_icon %}is-invalid{% endif %}" 
+                                       id="fav_icon" 
+                                       name="fav_icon" 
+                                       type="file"
+                                       accept="image/jpeg,image/png,image/gif,image/jpg"> 
+                                <small class="help-text">Recommended size: 64x64 pixels. Max size: 5MB</small>
+                                {% if system_settings.fav_icon %} 
+                                <div class="image-preview">
+                                    <img src="{{ MEDIA_URL }}{{ system_settings.fav_icon }}" 
+                                         alt="Fav Icon" 
+                                         style="width: 64px; height: 64px; object-fit: contain;"> 
+                                </div>
+                                {% endif %}
+                                {% if errors.fav_icon %} 
+                                <div class="invalid-feedback">{{ errors.fav_icon }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="website_logo">
+                                    Website Logo
+                                </label>
+                                <input class="form-control btn-pill {% if errors.website_logo %}is-invalid{% endif %}" 
+                                       id="website_logo" 
+                                       name="website_logo" 
+                                       type="file"
+                                       accept="image/jpeg,image/png,image/gif,image/jpg"> 
+                                <small class="help-text">Recommended: transparent background. Max size: 5MB</small>
+                                {% if system_settings.website_logo %} 
+                                <div class="image-preview">
+                                    <img src="{{ MEDIA_URL }}{{ system_settings.website_logo }}" 
+                                         alt="Website Logo" 
+                                         style="max-width: 200px; max-height: 100px; object-fit: contain;"> 
+                                </div>
+                                {% endif %}
+                                {% if errors.website_logo %} 
+                                <div class="invalid-feedback">{{ errors.website_logo }}</div> 
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if errors.general %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fa fa-exclamation-circle me-2"></i>{{ errors.general }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer text-end">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fa fa-save me-2"></i>Save Settings
+                    </button>
+                    <a href="{% url 'System_Settings' %}" class="btn btn-light">
+                        <i class="fa fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div> 
+
+{% endblock %}
+
+{% block script %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     // Constants
     const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-    const REQUIRED_FIELDS = [
-        '#phone','#gst_number','#razorpay_key','#razorpay_secret','#reward_points_to_rupees', '#reward_points_to_rupees', '#user_reffer_points'
-    ];
-    
-    
-    // Initialize form validation
-    const initFormValidation = () => {
-        // Form submission handler
-        $('form').on('submit', function(e) {
-            resetValidation();
-            const hasErrors = validateForm();
-            
-            if (hasErrors) {
-                e.preventDefault();
-                scrollToFirstError();
-                return false;
-            }
-            return true;
-        });
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    // Image file validation
+    $('input[type="file"]').on('change', function() {
+        const file = this.files[0];
+        const $input = $(this);
         
-        // Real-time validation on blur
-        $(REQUIRED_FIELDS.join(',')).on('blur', function() {
-            validateField($(this));
-        });
+        if (!file) return;
         
-        // Image validation
-        $('input[type="file"]').on('change', function() {
-            validateImageFile(this);
-        });
-    };
-    
-    // Reset validation state
-    const resetValidation = () => {
-        $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').remove();
-    };
-    
-    // Validate entire form
-    const validateForm = () => {
+        // Clear previous errors
+        $input.removeClass('is-invalid');
+        $input.siblings('.invalid-feedback').remove();
+        
+        // Check file type
+        if (!IMAGE_TYPES.includes(file.type)) {
+            showError($input, 'Please upload a valid image (JPEG, PNG, GIF)');
+            this.value = '';
+            return;
+        }
+        
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+            showError($input, 'File size must be less than 5MB');
+            this.value = '';
+            return;
+        }
+        
+        // Show preview for logo/favicon
+        if ($input.attr('id') === 'fav_icon' || $input.attr('id') === 'website_logo') {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = $input.siblings('.image-preview');
+                if (preview.length) {
+                    preview.find('img').attr('src', e.target.result);
+                } else {
+                    const maxHeight = $input.attr('id') === 'fav_icon' ? '64px' : '100px';
+                    $input.after(`
+                        <div class="image-preview">
+                            <img src="${e.target.result}" alt="Preview" 
+                                 style="max-width: 200px; max-height: ${maxHeight}; object-fit: contain;">
+                        </div>
+                    `);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Email validation
+    $('#email').on('blur', function() {
+        const email = $(this).val().trim();
+        if (email && !isValidEmail(email)) {
+            showError($(this), 'Please enter a valid email address');
+        } else {
+            clearError($(this));
+        }
+    });
+
+    // Phone validation
+    $('#phone').on('blur', function() {
+        const phone = $(this).val().trim();
+        if (!phone) {
+            showError($(this), 'Phone number is required');
+        } else {
+            clearError($(this));
+        }
+    });
+
+    // Form submission validation
+    $('#systemSettingsForm').on('submit', function(e) {
         let hasErrors = false;
         
-        REQUIRED_FIELDS.forEach(field => {
-            const $field = $(field);
-            if (!$field.val().trim()) {
-                showError($field, 'This field is required.');
-                hasErrors = true;
-            }
-        });
+        // Validate phone (required)
+        const phone = $('#phone').val().trim();
+        if (!phone) {
+            showError($('#phone'), 'Phone number is required');
+            hasErrors = true;
+        }
         
-        // Special validations
+        // Validate email format if provided
         const email = $('#email').val().trim();
         if (email && !isValidEmail(email)) {
-            showError($('#email'), 'Please enter a valid email address.');
+            showError($('#email'), 'Please enter a valid email address');
             hasErrors = true;
         }
         
-        const phone = $('#phone').val().trim();
-        if (phone && !isValidPhone(phone)) {
-            showError($('#phone'), 'Please enter a valid phone number.');
-            hasErrors = true;
-        }
-        
-        return hasErrors;
-    };
-    
-    // Validate individual field
-    const validateField = ($field) => {
-        const id = $field.attr('id');
-        const value = $field.val().trim();
-        
-        if (!value && REQUIRED_FIELDS.includes(`#${id}`)) {
-            showError($field, 'This field is required.');
+        if (hasErrors) {
+            e.preventDefault();
+            scrollToFirstError();
             return false;
         }
-        
-        clearError($field);
-        return true;
-    };
-    
-    // Show error for a field
-    const showError = ($field, message) => {
+    });
+
+    // Helper functions
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function showError($field, message) {
         $field.addClass('is-invalid');
-        if (!$field.next('.invalid-feedback').length) {
+        if (!$field.siblings('.invalid-feedback').length) {
             $field.after(`<div class="invalid-feedback">${message}</div>`);
-        } else {
-            $field.next('.invalid-feedback').text(message);
         }
-    };
-    
-    // Clear error for a field
-    const clearError = ($field) => {
+    }
+
+    function clearError($field) {
         $field.removeClass('is-invalid');
-        $field.next('.invalid-feedback').remove();
-    };
-    
-    // Scroll to first error
-    const scrollToFirstError = () => {
+        $field.siblings('.invalid-feedback').remove();
+    }
+
+    function scrollToFirstError() {
         const $firstError = $('.is-invalid').first();
         if ($firstError.length) {
             $('html, body').animate({
                 scrollTop: $firstError.offset().top - 100
             }, 500);
         }
-    };
-    
-    // Validate image file
-    const validateImageFile = (input) => {
-        const file = input.files[0];
-        if (!file) return;
-        
-        if (!IMAGE_TYPES.includes(file.type)) {
-            showError($(input), 'Please upload a valid image (JPEG, PNG, GIF, JPG).');
-            input.value = '';
-        } else {
-            clearError($(input));
-        }
-    };
-    
-    // Initialize the form validation
-    initFormValidation();
+    }
 });
 </script>
 {% endblock %}

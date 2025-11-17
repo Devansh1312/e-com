@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<style>
+    .image-preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .image-preview {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .image-preview .remove-btn {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: rgba(255, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .current-images {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .current-image {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .current-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .current-image .delete-checkbox {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Product Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addProductModal">Add Product</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Image</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>MRP</th>
+                                        <th>Sale Price</th>
+                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            {% if product.images.first %}
+                                                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                            {% else %}
+                                                <span class="text-muted">No Image</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ product.name }}</td>
+                                        <td>{{ product.category.name }}</td>
+                                        <td>₹{{ product.MRP|default:"-" }}</td>
+                                        <td>₹{{ product.sale_price|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if product.status %}success{% else %}danger{% endif %}">
+                                                {% if product.status %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editProductModal" 
+                                                            data-product-id="{{ product.id }}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteProductModal" data-product-id="{{ product.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Product Modal -->
+        <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'product_create' %}" id="addProductForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label">Product Name*</label>
+                                    <input type="text" class="form-control" id="name" name="name" placeholder="Enter product name">
+                                    <div class="invalid-feedback" id="name-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="category" class="form-label">Category*</label>
+                                    <select class="form-control" id="category" name="category" required>
+                                        <option value="">Select Category</option>
+                                        {% for category in categories %}
+                                            <option value="{{ category.id }}">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback" id="category-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter product description"></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="MRP" class="form-label">MRP (₹)</label>
+                                    <input type="number" class="form-control" id="MRP" name="MRP" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="sale_price" class="form-label">Sale Price (₹)</label>
+                                    <input type="number" class="form-control" id="sale_price" name="sale_price" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="url" class="form-label">Product URL</label>
+                                    <input type="url" class="form-control" id="url" name="url" placeholder="https://example.com/product">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="images" class="form-label">Product Images</label>
+                                    <input type="file" class="form-control" id="images" name="images" multiple accept="image/*">
+                                    <small class="text-muted">You can select multiple images. Maximum file size: 5MB each.</small>
+                                    <div class="image-preview-container" id="imagePreview"></div>
+                                    <div class="invalid-feedback" id="images-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="status" name="status" checked>
+                                        <label class="form-check-label" for="status">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Add Product</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Product Modal -->
+        <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editProductForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" id="productId" name="id">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_name" class="form-label">Product Name*</label>
+                                    <input type="text" class="form-control" id="edit_name" name="name">
+                                    <div class="invalid-feedback" id="edit_name-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_category" class="form-label">Category*</label>
+                                    <select class="form-control" id="edit_category" name="category" required>
+                                        <option value="">Select Category</option>
+                                        {% for category in categories %}
+                                            <option value="{{ category.id }}">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback" id="edit_category-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_MRP" class="form-label">MRP (₹)</label>
+                                    <input type="number" class="form-control" id="edit_MRP" name="MRP" step="0.01" min="0">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_sale_price" class="form-label">Sale Price (₹)</label>
+                                    <input type="number" class="form-control" id="edit_sale_price" name="sale_price" step="0.01" min="0">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_url" class="form-label">Product URL</label>
+                                    <input type="url" class="form-control" id="edit_url" name="url">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Current Images</label>
+                                    <div class="current-images" id="currentImages"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_images" class="form-label">Add New Images</label>
+                                    <input type="file" class="form-control" id="edit_images" name="new_images" multiple accept="image/*">
+                                    <small class="text-muted">You can select multiple images. Maximum file size: 5MB each.</small>
+                                    <div class="image-preview-container" id="editImagePreview"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="edit_status" name="status">
+                                        <label class="form-check-label" for="edit_status">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update Product</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Product Modal -->
+        <div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="deleteProductForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="product_id" name="id">
+                            <p>Are you sure you want to delete this product? This will also delete all associated images. This action cannot be undone.</p>
+                            <button type="submit" class="btn btn-danger">Delete Product</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script>
+    $(document).ready(function() {
+        // Function to validate form fields
+        function validateForm(form) {
+            let isValid = true;
+            
+            // Validate Name
+            const nameInput = form.find('#name, #edit_name');
+            const nameError = form.find('#name-error, #edit_name-error');
+            if (nameInput.val().trim() === '') {
+                nameInput.addClass('is-invalid');
+                nameError.text('Product name is required.');
+                isValid = false;
+            } else {
+                nameInput.removeClass('is-invalid');
+                nameError.text('');
+            }
+            
+            // Validate Category
+            const categoryInput = form.find('#category, #edit_category');
+            const categoryError = form.find('#category-error, #edit_category-error');
+            if (categoryInput.val() === '') {
+                categoryInput.addClass('is-invalid');
+                categoryError.text('Category is required.');
+                isValid = false;
+            } else {
+                categoryInput.removeClass('is-invalid');
+                categoryError.text('');
+            }
+            
+            return isValid;
+        }
+
+        // Image preview functionality
+        function setupImagePreview(inputId, previewId) {
+            $(inputId).on('change', function() {
+                const files = this.files;
+                const previewContainer = $(previewId);
+                previewContainer.empty();
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.match('image.*')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const preview = $('<div class="image-preview">');
+                            preview.html(`
+                                <img src="${e.target.result}" alt="Preview">
+                                <button type="button" class="remove-btn">&times;</button>
+                            `);
+                            previewContainer.append(preview);
+                            
+                            // Remove preview when X is clicked
+                            preview.find('.remove-btn').on('click', function() {
+                                preview.remove();
+                                // Remove the file from input
+                                const dt = new DataTransfer();
+                                const input = $(inputId)[0];
+                                for (let file of input.files) {
+                                    if (file !== files[i]) {
+                                        dt.items.add(file);
+                                    }
+                                }
+                                input.files = dt.files;
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        }
+
+        // Initialize image previews
+        setupImagePreview('#images', '#imagePreview');
+        setupImagePreview('#edit_images', '#editImagePreview');
+
+        // Add Product Form Validation
+        $('#addProductForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Edit Product Form Validation
+        $('#editProductForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Clear validation errors when modal is closed
+        $('.modal').on('hidden.bs.modal', function() {
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            $(this).find('.invalid-feedback').text('');
+            $(this).find('form')[0].reset();
+            $(this).find('.image-preview-container').empty();
+            $('#currentImages').empty();
+        });
+
+        // Clear validation when user starts typing
+        $('#name, #edit_name, #category, #edit_category').on('input change', function() {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').text('');
+        });
+
+        // Edit Product Modal initialization
+        $('#editProductModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var productId = button.data('product-id');
+            
+            // Fetch product data via AJAX
+            $.ajax({
+                url: "{% url 'product_edit' 0 %}".replace("0", productId),
+                type: 'GET',
+                success: function(response) {
+                    var form = $('#editProductForm');
+                    form.attr('action', "{% url 'product_edit' 0 %}".replace("0", productId));
+                    form.find('#productId').val(productId);
+                    form.find('#edit_name').val(response.name || "");
+                    form.find('#edit_category').val(response.category_id || "");
+                    form.find('#edit_description').val(response.description || "");
+                    form.find('#edit_MRP').val(response.MRP || "");
+                    form.find('#edit_sale_price').val(response.sale_price || "");
+                    form.find('#edit_url').val(response.url || "");
+                    form.find('#edit_status').prop('checked', response.status);
+                    
+                    // Display current images
+                    var currentImagesContainer = $('#currentImages');
+                    currentImagesContainer.empty();
+                    
+                    if (response.images && response.images.length > 0) {
+                        response.images.forEach(function(image) {
+                            var imageHtml = `
+                                <div class="current-image">
+                                    <img src="${image.url}" alt="Product Image">
+                                    <input type="checkbox" class="delete-checkbox" name="delete_images" value="${image.id}">
+                                    <small class="text-muted d-block">Delete</small>
+                                </div>
+                            `;
+                            currentImagesContainer.append(imageHtml);
+                        });
+                    } else {
+                        currentImagesContainer.html('<p class="text-muted">No images</p>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching product data:', error);
+                    alert('Error loading product data');
+                }
+            });
+        });
+
+        // Delete Product Modal
+        $('#deleteProductModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var productId = button.data('product-id');
+            $('#deleteProductForm').attr('action', "{% url 'product_delete' 0 %}".replace('0', productId));
+        });
+
+        // Toggle action menu
+        $(document).on('click', '.three-dots-menu', function(e) {
+            e.preventDefault();
+            var actionCard = $(this).next('.action-card');
+            $('.action-card').not(actionCard).hide();
+            actionCard.toggle();
+        });
+
+        // Hide action card if clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.action-menu-container').length) {
+                $('.action-card').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}

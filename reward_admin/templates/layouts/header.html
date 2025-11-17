@@ -45,14 +45,12 @@
                         </div>
                     </div>
                     <ul class="profile-dropdown onhover-show-div" style=" width: 210px!important; right: 0px!important;">
-                        {% if request.user|has_permission:'user_profile' %}
                         <a href="{% url 'user_profile' %}" >
                             <li>
                                 <i data-feather="user"></i>
                                 <span>Edit Profile</span>
                             </li>
                         </a>
-                        {% endif %}
                         <a href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                             <li>
                                 <i data-feather="settings"> </i>

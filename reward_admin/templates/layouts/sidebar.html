@@ -9,12 +9,7 @@
 <div class="sidebar-wrapper" sidebar-layout="stroke-svg">
 	<div>
 		<div class="logo-wrapper">
-			{% if request.user.role.id == 1 or request.user.role.id == 2 %}
 				<a href="{% url 'view_dashboard' %}">
-			{% else %}
-				<a href="{% url 'Attendance_Taker_Dashboard' %}">
-			{% endif %}
-
 				<img style="outline: none !important; width: 50px; height: auto; display: flex; margin-left: 60px; border: none !important;" class="img-fluid for-light" src="{{ website_logo }}" alt="">
 			
 			</a>
@@ -45,7 +40,6 @@
 							<i class="fa fa-angle-right ps-2" aria-hidden="true"></i>
 						</div>
 					</li>
-					{% if request.user|has_permission:'view_dashboard' %}
 						<li class="sidebar">
 							<a class="sidebar-link sidebar-title link-nav" href="{% url 'view_dashboard' %}">
 								<svg class="stroke-icon">
@@ -54,17 +48,7 @@
 								<span class="lan">Dashboard</span>
 							</a>
 						</li>
-					{% endif %}
-					{% if request.user|has_permission:'Attendance_Taker_Dashboard' and request.user.role.id == 4 %}
-						<li class="sidebar">
-							<a class="sidebar-link sidebar-title link-nav" href="{% url 'Attendance_Taker_Dashboard' %}">
-								<svg class="stroke-icon">
-									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-home"></use>
-								</svg>
-								<span class="lan">Dashboard</span>
-							</a>
-						</li>
-					{% endif %}
+
 					<!-- User Menu -->
 					<li class="sidebar-list">
 						<a class="sidebar-link sidebar-title" href="#">
@@ -77,18 +61,53 @@
 							<span class="lan">User</span>
 						</a>
 						<ul class="sidebar-submenu">
-							{% if request.user|has_permission:'sub_admin_list' %}
 							<li>
-								<a href="{% url 'sub_admin_list' %}">{{ user_role2 }}</a>
+								<a href="{% url 'customer_user_list' %}">{{ user_role2 }}</a>
 							</li>
-							{% endif %}
-							{% if request.user|has_permission:'club_member_list' %}
-							<li>
-								<a href="{% url 'club_member_list' %}">{{ user_role3 }}</a>
-							</li>
-							{% endif %}
 						</ul>
 					</li>
+
+					<!-- For Product Management -->
+					<li class="sidebar-list">
+						<a class="sidebar-link sidebar-title" href="#">
+							<svg class="stroke-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-widget"></use>
+							</svg>
+							<svg class="fill-icon">
+								<use href="{% static 'assets/svg/icon-sprite.svg'%}#fill-widget"></use>
+							</svg>
+							<span class="lan">Product Management</span>
+						</a>
+						<ul class="sidebar-submenu">
+							<li>
+								<a href="{% url 'product_category_list' %}">Product Category</a>
+							</li>
+							<li>
+								<a href="{% url 'product_list' %}">Product</a>
+							</li>
+						</ul>
+					</li>
+
+					<!-- For Customer Review Management -->
+					 <li class="sidebar">
+							<a class="sidebar-link sidebar-title link-nav" href="{% url 'customer_review_list' %}">
+								<svg class="stroke-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-home"></use>
+								</svg>
+								<span class="lan">Customer Review</span>
+							</a>
+						</li>
+
+						<!-- For Contact Us Management -->
+						 <li class="sidebar">
+							<a class="sidebar-link sidebar-title link-nav" href="{% url 'contact_us_list' %}">
+								<svg class="stroke-icon">
+									<use href="{% static 'assets/svg/icon-sprite.svg'%}#stroke-home"></use>
+								</svg>
+								<span class="lan">Contact Us</span>
+							</a>
+						</li>
+					
 					
 					<!-- For General Settings -->
 					<li class="sidebar-list">
@@ -102,21 +121,18 @@
 							<span class="lan">General Settings</span>
 						</a>
 						<ul class="sidebar-submenu">
-							{% if request.user|has_permission:'country_list' %}
 							<li>
 								<a href="{% url 'country_list' %}">Country</a>
 							</li>
-							{% endif %}
-							{% if request.user|has_permission:'state_list' %}
 							<li>
 								<a href="{% url 'state_list' %}">State</a>
 							</li>
-							{% endif %}
-							{% if request.user|has_permission:'city_list' %}
 							<li>
 								<a href="{% url 'city_list' %}">City</a>
 							</li>
-							{% endif %}
+							<li>
+								<a href="{% url 'faq_list' %}">FAQ</a>
+							</li>
 						</ul>
 					</li>
 

@@ -9,7 +9,7 @@
 <!-- Plugins css Ends-->
 {% endblock %}
 
-{% block title %}User Referral Type Management{% endblock %}
+{% block title %}Product Category Management{% endblock %}
 
 {% block content %}
 <div class="page-body">
@@ -21,7 +21,7 @@
                 </div>
                 <div class="col-6">
                     <ol class="breadcrumb">
-                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addReferralTypeModal">Add Referral Type</button>
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addCategoryModal">Add Category</button>
                     </ol>
                 </div>
             </div>
@@ -36,18 +36,24 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Name</th>
+                                        <th>Status</th>
                                         <th>Created At</th>
                                         <th>Updated At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for referral_type in referral_types %}
+                                    {% for category in categories %}
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
-                                        <td>{{ referral_type.name }}</td>
-                                        <td>{{ referral_type.created_at|date:"Y-m-d H:i" }}</td>
-                                        <td>{{ referral_type.updated_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ category.name }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if category.status %}success{% else %}danger{% endif %}">
+                                                {% if category.status %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ category.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ category.updated_at|date:"Y-m-d H:i" }}</td>
                                         <td>
                                             <div class="action-menu-container" style="position: relative; display: inline-block;">
                                                 <a href="#" class="three-dots-menu">
@@ -56,12 +62,13 @@
                                                 <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
                                                     <ul style="list-style: none; padding: 0; margin: 0;">
                                                         <li style="padding: 8px 12px;">
-                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editReferralTypeModal" 
-                                                            data-referral-type-id="{{ referral_type.id }}" 
-                                                            data-referral-type-name="{{ referral_type.name }}"> Edit </a>
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
+                                                            data-category-id="{{ category.id }}" 
+                                                            data-category-name="{{ category.name }}"
+                                                            data-category-status="{% if category.status %}true{% else %}false{% endif %}"> Edit </a>
                                                         </li>
                                                         <li style="padding: 8px 12px; border-top: 1px solid #eee;">
-                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteReferralTypeModal" data-referral-type-id="{{ referral_type.id }}">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal" data-category-id="{{ category.id }}">
                                                             Delete </a>
                                                         </li>
                                                     </ul>
@@ -78,25 +85,32 @@
             </div>
         </div>
         
-        <!-- Add Referral Type Modal -->
-        <div class="modal fade" id="addReferralTypeModal" tabindex="-1" aria-labelledby="addReferralTypeModalLabel" aria-hidden="true">
+        <!-- Add Category Modal -->
+        <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addReferralTypeModalLabel">Add Referral Type</h5>
+                        <h5 class="modal-title" id="addCategoryModalLabel">Add Product Category</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="{% url 'referral_type_create' %}" id="addReferralTypeForm">
+                        <form method="post" action="{% url 'product_category_create' %}" id="addCategoryForm">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-12 mb-3">
-                                    <label for="name" class="form-label">Name*</label>
-                                    <input type="text" class="form-control" id="name" name="name" placeholder="Referral Type Name">
+                                    <label for="name" class="form-label">Category Name*</label>
+                                    <input type="text" class="form-control" id="name" name="name" placeholder="Enter category name">
                                     <div class="invalid-feedback" id="name-error"></div>
                                 </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="status" name="status" checked>
+                                        <label class="form-check-label" for="status">Active</label>
+                                    </div>
+                                </div>
                                 <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">Add Referral Type</button>
+                                    <button type="submit" class="btn btn-primary">Add Category</button>
                                 </div>
                             </div>
                         </form>
@@ -105,26 +119,33 @@
             </div>
         </div>
         
-        <!-- Edit Referral Type Modal -->
-        <div class="modal fade" id="editReferralTypeModal" tabindex="-1" aria-labelledby="editReferralTypeModalLabel" aria-hidden="true">
+        <!-- Edit Category Modal -->
+        <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editReferralTypeModalLabel">Edit Referral Type</h5>
+                        <h5 class="modal-title" id="editCategoryModalLabel">Edit Product Category</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" id="editReferralTypeForm">
+                        <form method="post" id="editCategoryForm">
                             {% csrf_token %}
-                            <input type="hidden" id="referralTypeId" name="id">
+                            <input type="hidden" id="categoryId" name="id">
                             <div class="row">
                                 <div class="col-md-12 mb-3">
-                                    <label for="edit_name" class="form-label">Name*</label>
+                                    <label for="edit_name" class="form-label">Category Name*</label>
                                     <input type="text" class="form-control" id="edit_name" name="name">
                                     <div class="invalid-feedback" id="edit_name-error"></div>
                                 </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="edit_status" name="status">
+                                        <label class="form-check-label" for="edit_status">Active</label>
+                                    </div>
+                                </div>
                                 <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">Update Referral Type</button>
+                                    <button type="submit" class="btn btn-primary">Update Category</button>
                                 </div>
                             </div>
                         </form>
@@ -133,20 +154,20 @@
             </div>
         </div>
         
-        <!-- Delete Referral Type Modal -->
-        <div class="modal fade" id="deleteReferralTypeModal" tabindex="-1" aria-labelledby="deleteReferralTypeModalLabel" aria-hidden="true">
+        <!-- Delete Category Modal -->
+        <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="deleteReferralTypeModalLabel">Delete Referral Type</h5>
+                        <h5 class="modal-title" id="deleteCategoryModalLabel">Delete Product Category</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="" id="deleteReferralTypeForm">
+                        <form method="post" action="" id="deleteCategoryForm">
                             {% csrf_token %}
-                            <input type="hidden" id="referral_type_id" name="id">
-                            <p>Are you sure you want to delete this referral type? This action cannot be undone.</p>
-                            <button type="submit" class="btn btn-danger">Delete Referral Type</button>
+                            <input type="hidden" id="category_id" name="id">
+                            <p>Are you sure you want to delete this product category? This action cannot be undone.</p>
+                            <button type="submit" class="btn btn-danger">Delete Category</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         </form>
                     </div>
@@ -171,7 +192,7 @@
             const nameError = form.find('#name-error, #edit_name-error');
             if (nameInput.val().trim() === '') {
                 nameInput.addClass('is-invalid');
-                nameError.text('Referral type name is required.');
+                nameError.text('Category name is required.');
                 isValid = false;
             } else {
                 nameInput.removeClass('is-invalid');
@@ -181,16 +202,16 @@
             return isValid;
         }
 
-        // Add Referral Type Form Validation
-        $('#addReferralTypeForm').on('submit', function(event) {
+        // Add Category Form Validation
+        $('#addCategoryForm').on('submit', function(event) {
             event.preventDefault();
             if (validateForm($(this))) {
                 this.submit();
             }
         });
 
-        // Edit Referral Type Form Validation
-        $('#editReferralTypeForm').on('submit', function(event) {
+        // Edit Category Form Validation
+        $('#editCategoryForm').on('submit', function(event) {
             event.preventDefault();
             if (validateForm($(this))) {
                 this.submit();
@@ -210,23 +231,27 @@
             $(this).siblings('.invalid-feedback').text('');
         });
 
-        // Edit Referral Type Modal initialization
-        $('#editReferralTypeModal').on('show.bs.modal', function(event) {
+        // Edit Category Modal initialization
+        $('#editCategoryModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
-            var referralTypeId = button.data('referral-type-id');
-            var name = button.data('referral-type-name');
+            var categoryId = button.data('category-id');
+            var name = button.data('category-name');
+            var status = button.data('category-status');
             
-            var form = $('#editReferralTypeForm');
-            form.attr('action', "{% url 'referral_type_edit' 0 %}".replace("0", referralTypeId));
-            form.find('#referralTypeId').val(referralTypeId);
+            var form = $('#editCategoryForm');
+            form.attr('action', "{% url 'product_category_edit' 0 %}".replace("0", categoryId));
+            form.find('#categoryId').val(categoryId);
             form.find('#edit_name').val(name || "");
+            
+            // Set checkbox status
+            form.find('#edit_status').prop('checked', status === 'true');
         });
 
-        // Delete Referral Type Modal
-        $('#deleteReferralTypeModal').on('show.bs.modal', function(event) {
+        // Delete Category Modal
+        $('#deleteCategoryModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
-            var referralTypeId = button.data('referral-type-id');
-            $('#deleteReferralTypeForm').attr('action', "{% url 'referral_type_delete' 0 %}".replace('0', referralTypeId));
+            var categoryId = button.data('category-id');
+            $('#deleteCategoryForm').attr('action', "{% url 'product_category_delete' 0 %}".replace('0', categoryId));
         });
 
         // Toggle action menu

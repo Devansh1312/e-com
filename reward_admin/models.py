@@ -120,12 +120,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     username = models.CharField(max_length=150, unique=True)
-    membership_id = models.CharField(max_length=150, unique=True)
     profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
     card_header = models.ImageField(upload_to="card_header/", null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
-    enrollment_date = models.DateField(null=True, blank=True)
-    anniversary_date = models.DateField(null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     pincode = models.CharField(max_length=10, null=True, blank=True)
     email = models.EmailField(null=True, blank=True, unique=True)
@@ -143,7 +140,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=255)
     role = models.ForeignKey('Role', on_delete=models.SET_NULL, null=True, blank=True)
     remember_token = models.CharField(max_length=255, null=True, blank=True)
-    token_created_at = models.DateTimeField(null=True, blank=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -156,16 +152,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
-    
-    def has_permission(self, permission_name):
-        if self.is_superuser:
-            return True
-        return self.role.permissions.filter(name=permission_name).exists()
-    
-    def has_any_permission(self, permission_names):
-        if self.is_superuser:
-            return True
-        return self.role.permissions.filter(name__in=permission_names).exists()
 
     class Meta:
         db_table = 'e_com_user'
@@ -177,11 +163,7 @@ class SystemSettings(models.Model):
     website_logo = models.CharField(max_length=255, null=True, blank=True)
     phone = models.TextField(max_length=20)
     email = models.TextField(null=True, blank=True)
-    gst_number = models.TextField(null=True, blank=True)
-    razorpay_key = models.TextField(null=True, blank=True)
-    razorpay_secret = models.TextField(null=True, blank=True)
-    club_address = models.TextField(null=True, blank=True)
-    office_address = models.TextField(null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     
@@ -202,19 +184,95 @@ class FAQ(models.Model):
     class Meta:
         db_table = 'e_com_faq'
 
-class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'e_com_notification'
+    
+    
+class product_category(models.Model):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
 
     def __str__(self):
-        return f"{self.user.username} - {self.message}"
-    
-    
+        return self.name
 
+    class Meta:
+        db_table = 'e_com_product_category'
+
+
+class product(models.Model):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    category = models.ForeignKey(product_category, on_delete=models.CASCADE, related_name='products')
+    description = models.TextField(null=True, blank=True)
+    MRP = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
+    url = models.URLField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'e_com_product'
+
+class product_image(models.Model):
+    product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to="product_images/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        db_table = 'e_com_product_image'
+
+class customer_review(models.Model):
+    product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='reviews')
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.IntegerField(null=True, blank=True)
+    review = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        db_table = 'e_com_customer_review'
+        unique_together = ('product', 'customer')
+
+class contact_us(models.Model):
+    name = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    subject = models.CharField(max_length=255, null=True, blank=True)
+    message = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'e_com_contact_us'
+
+class wishlist(models.Model):
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wishlist')
+    product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='wishlist')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.customer.username
+
+    class Meta:
+        db_table = 'e_com_wishlist'
+        unique_together = ('customer', 'product')
+
+class cart(models.Model):
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cart')
+    product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.customer.username
+
+    class Meta:
+        db_table = 'e_com_cart'
+        unique_together = ('customer', 'product')

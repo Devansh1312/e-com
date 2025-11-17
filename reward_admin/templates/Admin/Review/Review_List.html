@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<style>
+    .rating-stars {
+        color: #ffc107;
+    }
+    .review-text {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Customer Reviews Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Product</th>
+                                        <th>Customer</th>
+                                        <th>Rating</th>
+                                        <th>Review</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for review in reviews %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ review.product.name }}</td>
+                                        <td>{{ review.customer.name|default:review.customer.username }}</td>
+                                        <td>
+                                            <div class="rating-stars">
+                                                {% for i in "12345" %}
+                                                    {% if forloop.counter <= review.rating %}
+                                                        ★
+                                                    {% else %}
+                                                        ☆
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <small class="text-muted">({{ review.rating }}/5)</small>
+                                            </div>
+                                        </td>
+                                        <td class="review-text" title="{{ review.review }}">{{ review.review|default:"No review text" }}</td>
+                                        <td>{{ review.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#viewReviewModal" 
+                                                            data-review-id="{{ review.id }}"> View </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editReviewModal" 
+                                                            data-review-id="{{ review.id }}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteReviewModal" data-review-id="{{ review.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- View Review Modal -->
+        <div class="modal fade" id="viewReviewModal" tabindex="-1" aria-labelledby="viewReviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="viewReviewModalLabel">Review Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Product:</strong></label>
+                                <p id="view-product-name" class="form-control-plaintext"></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Customer:</strong></label>
+                                <p id="view-customer-name" class="form-control-plaintext"></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Customer Email:</strong></label>
+                                <p id="view-customer-email" class="form-control-plaintext"></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Rating:</strong></label>
+                                <p id="view-rating" class="form-control-plaintext"></p>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label"><strong>Review:</strong></label>
+                                <p id="view-review" class="form-control-plaintext" style="min-height: 100px;"></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Created At:</strong></label>
+                                <p id="view-created-at" class="form-control-plaintext"></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><strong>Updated At:</strong></label>
+                                <p id="view-updated-at" class="form-control-plaintext"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Review Modal -->
+        <div class="modal fade" id="editReviewModal" tabindex="-1" aria-labelledby="editReviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editReviewModalLabel">Edit Review</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editReviewForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="reviewId" name="id">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_rating" class="form-label">Rating*</label>
+                                    <select class="form-control" id="edit_rating" name="rating" required>
+                                        <option value="">Select Rating</option>
+                                        <option value="1">1 Star</option>
+                                        <option value="2">2 Stars</option>
+                                        <option value="3">3 Stars</option>
+                                        <option value="4">4 Stars</option>
+                                        <option value="5">5 Stars</option>
+                                    </select>
+                                    <div class="invalid-feedback" id="edit_rating-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_review" class="form-label">Review Text</label>
+                                    <textarea class="form-control" id="edit_review" name="review" rows="4" placeholder="Enter review text"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update Review</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Review Modal -->
+        <div class="modal fade" id="deleteReviewModal" tabindex="-1" aria-labelledby="deleteReviewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteReviewModalLabel">Delete Review</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="deleteReviewForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="review_id" name="id">
+                            <p>Are you sure you want to delete this review? This action cannot be undone.</p>
+                            <button type="submit" class="btn btn-danger">Delete Review</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script>
+    $(document).ready(function() {
+        // View Review Modal
+        $('#viewReviewModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var reviewId = button.data('review-id');
+            
+            $.ajax({
+                url: "{% url 'customer_review_view' 0 %}".replace("0", reviewId),
+                type: 'GET',
+                success: function(response) {
+                    $('#view-product-name').text(response.product_name);
+                    $('#view-customer-name').text(response.customer_name);
+                    $('#view-customer-email').text(response.customer_email);
+                    $('#view-rating').html('<span class="rating-stars">' + '★'.repeat(response.rating) + '☆'.repeat(5 - response.rating) + ' (' + response.rating + '/5)</span>');
+                    $('#view-review').text(response.review || 'No review text');
+                    $('#view-created-at').text(response.created_at);
+                    $('#view-updated-at').text(response.updated_at);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching review data:', error);
+                    alert('Error loading review data');
+                }
+            });
+        });
+
+        // Edit Review Modal
+        $('#editReviewModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var reviewId = button.data('review-id');
+            
+            $.ajax({
+                url: "{% url 'customer_review_edit' 0 %}".replace("0", reviewId),
+                type: 'GET',
+                success: function(response) {
+                    var form = $('#editReviewForm');
+                    form.attr('action', "{% url 'customer_review_edit' 0 %}".replace("0", reviewId));
+                    form.find('#reviewId').val(reviewId);
+                    form.find('#edit_rating').val(response.rating || "");
+                    form.find('#edit_review').val(response.review || "");
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching review data:', error);
+                    alert('Error loading review data');
+                }
+            });
+        });
+
+        // Delete Review Modal
+        $('#deleteReviewModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var reviewId = button.data('review-id');
+            $('#deleteReviewForm').attr('action', "{% url 'customer_review_delete' 0 %}".replace('0', reviewId));
+        });
+
+        // Form validation for edit review
+        $('#editReviewForm').on('submit', function(event) {
+            const rating = $('#edit_rating').val();
+            if (!rating) {
+                event.preventDefault();
+                $('#edit_rating').addClass('is-invalid');
+                $('#edit_rating-error').text('Rating is required.');
+                return false;
+            }
+            return true;
+        });
+
+        // Clear validation when rating is selected
+        $('#edit_rating').on('change', function() {
+            $(this).removeClass('is-invalid');
+            $('#edit_rating-error').text('');
+        });
+
+        // Toggle action menu
+        $(document).on('click', '.three-dots-menu', function(e) {
+            e.preventDefault();
+            var actionCard = $(this).next('.action-card');
+            $('.action-card').not(actionCard).hide();
+            actionCard.toggle();
+        });
+
+        // Hide action card if clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.action-menu-container').length) {
+                $('.action-card').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}
