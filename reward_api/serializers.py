@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from reward_admin.models import User, FAQ, SystemSettings
+from reward_admin.models import User, FAQ, SystemSettings, cart, wishlist, product
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -7,6 +7,8 @@ class UserSerializer(serializers.ModelSerializer):
     profile_picture_url = serializers.SerializerMethodField()
     gender_name = serializers.SerializerMethodField()
     state_name = serializers.SerializerMethodField()
+    cart_items = serializers.SerializerMethodField()
+    wishlist_items = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -35,6 +37,8 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'created_at',
             'updated_at',
+            'cart_items',
+            'wishlist_items',
         ]
         read_only_fields = (
             'username',
@@ -61,6 +65,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_state_name(self, obj):
         return obj.state.name if obj.state else None
+
+    def get_cart_items(self, obj):
+        return cart.objects.filter(customer=obj).count()
+
+    def get_wishlist_items(self, obj):
+        return wishlist.objects.filter(customer=obj).count()
  
 
 class FAQSerializer(serializers.ModelSerializer):

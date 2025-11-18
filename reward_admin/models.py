@@ -239,6 +239,8 @@ class product(models.Model):
     description = models.TextField(null=True, blank=True)
     MRP = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_in_dolor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    sale_price_in_dollar = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
     url = models.URLField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)

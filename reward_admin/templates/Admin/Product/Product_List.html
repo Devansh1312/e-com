@@ -117,6 +117,8 @@
                                         <th>Category</th>
                                         <th>MRP</th>
                                         <th>Sale Price</th>
+                                        <th>Price ($)</th>
+                                        <th>Sale Price ($)</th>
                                         <th>Status</th>
                                         <th>Created At</th>
                                         <th>Actions</th>
@@ -137,6 +139,8 @@
                                         <td>{{ product.category.name }}</td>
                                         <td>₹{{ product.MRP|default:"-" }}</td>
                                         <td>₹{{ product.sale_price|default:"-" }}</td>
+                                        <td>${{ product.price_in_dolor|default:"-" }}</td>
+                                        <td>${{ product.sale_price_in_dollar|default:"-" }}</td>
                                         <td>
                                             <span class="badge badge-{% if product.status %}success{% else %}danger{% endif %}">
                                                 {% if product.status %}Active{% else %}Inactive{% endif %}
@@ -210,6 +214,14 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="sale_price" class="form-label">Sale Price (₹)</label>
                                     <input type="number" class="form-control" id="sale_price" name="sale_price" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="price_in_dolor" class="form-label">Price (USD)</label>
+                                    <input type="number" class="form-control" id="price_in_dolor" name="price_in_dolor" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="sale_price_in_dollar" class="form-label">Sale Price (USD)</label>
+                                    <input type="number" class="form-control" id="sale_price_in_dollar" name="sale_price_in_dollar" step="0.01" min="0" placeholder="0.00">
                                 </div>
                                 <div class="col-md-12 mb-3">
                                     <label for="url" class="form-label">Product URL</label>
@@ -288,6 +300,14 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="edit_sale_price" class="form-label">Sale Price (₹)</label>
                                     <input type="number" class="form-control" id="edit_sale_price" name="sale_price" step="0.01" min="0">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_price_in_dolor" class="form-label">Price (USD)</label>
+                                    <input type="number" class="form-control" id="edit_price_in_dolor" name="price_in_dolor" step="0.01" min="0">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_sale_price_in_dollar" class="form-label">Sale Price (USD)</label>
+                                    <input type="number" class="form-control" id="edit_sale_price_in_dollar" name="sale_price_in_dollar" step="0.01" min="0">
                                 </div>
                                 <div class="col-md-12 mb-3">
                                     <label for="edit_url" class="form-label">Product URL</label>
@@ -759,6 +779,8 @@
                     form.find('#edit_description').val(response.description || "");
                     form.find('#edit_MRP').val(response.MRP || "");
                     form.find('#edit_sale_price').val(response.sale_price || "");
+                    form.find('#edit_price_in_dolor').val(response.price_in_dolor || "");
+                    form.find('#edit_sale_price_in_dollar').val(response.sale_price_in_dollar || "");
                     form.find('#edit_url').val(response.url || "");
                     form.find('#edit_status').prop('checked', response.status);
                     

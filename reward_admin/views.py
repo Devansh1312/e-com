@@ -1800,6 +1800,8 @@ class ProductCreateView(View):
         description = request.POST.get('description')
         MRP = request.POST.get('MRP')
         sale_price = request.POST.get('sale_price')
+        price_in_dolor = request.POST.get('price_in_dolor')
+        sale_price_in_dollar = request.POST.get('sale_price_in_dollar')
         url = request.POST.get('url')
         status = 'status' in request.POST
         image_files = request.FILES.getlist('images')
@@ -1829,6 +1831,8 @@ class ProductCreateView(View):
                     description=description,
                     MRP=MRP if MRP else None,
                     sale_price=sale_price if sale_price else None,
+                    price_in_dolor=price_in_dolor if price_in_dolor else None,
+                    sale_price_in_dollar=sale_price_in_dollar if sale_price_in_dollar else None,
                     url=url,
                     status=status
                 )
@@ -1960,6 +1964,8 @@ class ProductEditView(View):
             'description': product_obj.description,
             'MRP': str(product_obj.MRP) if product_obj.MRP else '',
             'sale_price': str(product_obj.sale_price) if product_obj.sale_price else '',
+            'price_in_dolor': str(product_obj.price_in_dolor) if product_obj.price_in_dolor else '',
+            'sale_price_in_dollar': str(product_obj.sale_price_in_dollar) if product_obj.sale_price_in_dollar else '',
             'url': product_obj.url,
             'status': product_obj.status,
             'images': [
@@ -1980,6 +1986,8 @@ class ProductEditView(View):
         description = request.POST.get('description')
         MRP = request.POST.get('MRP')
         sale_price = request.POST.get('sale_price')
+        price_in_dolor = request.POST.get('price_in_dolor')
+        sale_price_in_dollar = request.POST.get('sale_price_in_dollar')
         url = request.POST.get('url')
         status = 'status' in request.POST
         new_images = request.FILES.getlist('new_images')
@@ -2009,6 +2017,8 @@ class ProductEditView(View):
                 product_obj.description = description
                 product_obj.MRP = MRP if MRP else None
                 product_obj.sale_price = sale_price if sale_price else None
+                product_obj.price_in_dolor = price_in_dolor if price_in_dolor else None
+                product_obj.sale_price_in_dollar = sale_price_in_dollar if sale_price_in_dollar else None
                 product_obj.url = url
                 product_obj.status = status
                 product_obj.save()
