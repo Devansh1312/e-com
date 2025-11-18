@@ -1,25 +1,15 @@
 # ================================
 # Django Core and Utility Imports
 # ================================
-from decimal import Decimal
 from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage, default_storage
-from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.validators import validate_email
-from django.http import JsonResponse, HttpResponse
-from django.middleware.csrf import get_token
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import render_to_string
-from django.urls import reverse, reverse_lazy
-from django.utils import timezone
+from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.html import strip_tags
 from django.views import View
-from django.views.generic import DeleteView
 from datetime import datetime
-from django.http import HttpResponseForbidden, HttpResponseBadRequest,Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 
@@ -30,14 +20,13 @@ from django.contrib import messages
 from django.contrib.auth import (
     authenticate, login, logout, get_user_model
 )
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 
 # ======================
 # Django ORM & DB Tools
 # ======================
-from django.db.models import Q, Sum, F, Prefetch
+from django.db.models import Q, Count, Avg
 
 
 
@@ -120,9 +109,9 @@ def LoginFormView(request):
         # Basic validation
         errors = {}
         if not login_input:
-            errors['phone'] = 'Phone/Email/Username is required'
+            errors['phone'] = 'Phone/Email/Username is required.'
         if not password:
-            errors['password'] = 'Password is required'
+            errors['password'] = 'Password is required.'
 
         if not errors:
             user = authenticate_username_email_or_phone(login_input, password)
@@ -134,6 +123,11 @@ def LoginFormView(request):
                         if remember_me:
                             request.session.set_expiry(1209600)
                         messages.success(request, "Login Successful")
+
+                        # ✅ Important: redirect immediately after successful login
+                        # so that the browser navigates to the dashboard without
+                        # needing a manual reload.
+                        return redirect('view_dashboard')
                     
                     else:
                         messages.error(
@@ -187,20 +181,109 @@ class Dashboard(LoginRequiredMixin, View):
         # Check if user is authenticated
         if not request.user.is_authenticated:
             return redirect('adminlogin')
-    
-                
-        total_customer_users = User.objects.filter(role_id=2).count()
-        
 
+        # ===============================
+        # HIGH LEVEL USER STATISTICS
+        # ===============================
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        inactive_users = total_users - active_users
 
-        # ========================================
-        # CONTEXT PREPARATION
-        # ========================================
-        
+        # Try to derive "customer" users via role (if configured)
+        customer_role_ids = list(
+            Role.objects.filter(name__icontains="customer").values_list("id", flat=True)
+        )
+        if not customer_role_ids:
+            customer_role_ids = list(
+                Role.objects.filter(name__icontains="user").values_list("id", flat=True)
+            )
+        total_customer_users = (
+            User.objects.filter(role_id__in=customer_role_ids).count()
+            if customer_role_ids
+            else 0
+        )
+
+        # ===============================
+        # PRODUCT & INVENTORY STATISTICS
+        # ===============================
+        total_products = product.objects.count()
+        active_products = product.objects.filter(status=True).count()
+        inactive_products = total_products - active_products
+
+        total_categories = product_category.objects.count()
+        total_variants = product_variant.objects.count()
+        total_images = product_image.objects.count()
+
+        # ===============================
+        # ENGAGEMENT STATISTICS
+        # ===============================
+        total_reviews = customer_review.objects.count()
+        average_rating = (
+            customer_review.objects.aggregate(avg_rating=Avg("rating"))["avg_rating"]
+            or 0
+        )
+        total_wishlist_items = wishlist.objects.count()
+        total_cart_items = cart.objects.count()
+
+        # ===============================
+        # ANALYTICS – FOR CHARTS
+        # ===============================
+        # Products per category
+        category_qs = (
+            product.objects.values("category__name")
+            .annotate(total=Count("id"))
+            .order_by("category__name")
+        )
+        category_labels = [
+            c["category__name"] or "Uncategorized" for c in category_qs if c["category__name"]
+        ]
+        category_counts = [c["total"] for c in category_qs if c["category__name"]]
+
+        # Rating distribution
+        rating_qs = (
+            customer_review.objects.values("rating")
+            .annotate(total=Count("id"))
+            .order_by("rating")
+        )
+        rating_labels = [str(r["rating"]) for r in rating_qs if r["rating"] is not None]
+        rating_counts = [r["total"] for r in rating_qs if r["rating"] is not None]
+
+        # Users per role
+        role_qs = (
+            User.objects.values("role__name")
+            .annotate(total=Count("id"))
+            .order_by("role__name")
+        )
+        role_labels = [r["role__name"] or "Unassigned" for r in role_qs]
+        role_counts = [r["total"] for r in role_qs]
+
         context = {
-            'total_customer_users': total_customer_users,
+            # User stats
+            "total_users": total_users,
+            "active_users": active_users,
+            "inactive_users": inactive_users,
+            "total_customer_users": total_customer_users,
+            # Product stats
+            "total_products": total_products,
+            "active_products": active_products,
+            "inactive_products": inactive_products,
+            "total_categories": total_categories,
+            "total_variants": total_variants,
+            "total_images": total_images,
+            # Engagement stats
+            "total_reviews": total_reviews,
+            "average_rating": round(average_rating, 2) if average_rating else 0,
+            "total_wishlist_items": total_wishlist_items,
+            "total_cart_items": total_cart_items,
+            # Chart data
+            "category_labels": category_labels,
+            "category_counts": category_counts,
+            "rating_labels": rating_labels,
+            "rating_counts": rating_counts,
+            "role_labels": role_labels,
+            "role_counts": role_counts,
         }
-        
+
         return render(request, "Admin/Dashboard.html", context)
 
 
@@ -209,79 +292,6 @@ class Dashboard(LoginRequiredMixin, View):
 def logout_view(request):
     logout(request)
     return redirect("adminlogin")
-
-
-################################## Send Welcome Email to Club Member #########################################
-def send_welcome_email(email, membership_id, name, password, system_settings, subject, request):
-    try:
-        logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
-        logo_url = f"{settings.MEDIA_DOMAIN}{logo}" if logo else ''
-        static_url = f"{settings.STATIC_DOMAIN}"
-        website_name = system_settings.website_name if system_settings else 'Baroda Presidency Club'
-        
-        # Prepare context for email template
-        context = {
-            'name': name,
-            'membership_id': membership_id,
-            'current_year': datetime.now().year,
-            'email': email,
-            'password': password,
-            'logo': logo_url,
-            'static_url': static_url,
-            'website_name': website_name,
-        }
-        
-        email_content = render_to_string('emails/welcome_email.html', context)
-        
-        # Send the email
-        send_mail(
-            subject=subject,
-            message=f'Welcome {name} to {website_name}',  # Plain text fallback
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=email_content,
-            fail_silently=False,
-        )
-        return True
-        
-    except Exception as e:
-        return False
-
-
-def send_password_change_email(email, membership_id, name, password, system_settings, request):
-    try:
-        logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
-        logo_url = f"{settings.MEDIA_DOMAIN}{logo}" if logo else ''
-        static_url = f"{settings.STATIC_DOMAIN}"
-        website_name = system_settings.website_name if system_settings else 'Baroda Presidency Club'
-        
-        # Prepare context for email template
-        context = {
-            'name': name,
-            'membership_id': membership_id,
-            'current_year': datetime.now().year,
-            'email': email,
-            'password': password,
-            'logo': logo_url,
-            'static_url': static_url,
-            'website_name': website_name,
-        }
-        
-        email_content = render_to_string('emails/password_change_email.html', context)
-        
-        # Send the email
-        send_mail(
-            subject='Your Password Has Been Updated',
-            message=f'Your password for {website_name} has been updated',  # Plain text fallback
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=email_content,
-            fail_silently=False,
-        )
-        return True
-        
-    except Exception as e:
-        return False
 
 ######################### SystemSettings view #######################################################
 class System_Settings(LoginRequiredMixin, View):
@@ -477,6 +487,9 @@ class UserUpdateProfileView(View):
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         name = request.POST.get('name', '').strip()
+        username = request.POST.get('username', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        email = request.POST.get('email', '').strip()
         
         # Validate required fields
         if not first_name:
@@ -485,6 +498,34 @@ class UserUpdateProfileView(View):
             errors['last_name'] = ['Last name is required']
         if not name:
             errors['name'] = ['Full name is required']
+        if not username:
+            errors['username'] = ['Username is required']
+        if not phone:
+            errors['phone'] = ['Phone number is required']
+
+        # Username uniqueness
+        if username:
+            if User.objects.filter(username__iexact=username).exclude(id=user.id).exists():
+                errors.setdefault('username', []).append('This username is already taken. Please choose another one.')
+
+        # Phone format & uniqueness (basic checks)
+        if phone:
+            if not phone.isdigit():
+                errors.setdefault('phone', []).append('Phone number must contain only digits.')
+            if len(phone) < 7:
+                errors.setdefault('phone', []).append('Phone number seems too short.')
+            if User.objects.filter(phone=phone).exclude(id=user.id).exists():
+                errors.setdefault('phone', []).append('This phone number is already in use.')
+
+        # Email format & uniqueness
+        if email:
+            try:
+                validate_email(email)
+            except DjangoValidationError:
+                errors.setdefault('email', []).append('Please enter a valid email address.')
+            else:
+                if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+                    errors.setdefault('email', []).append('This email is already in use.')
         
         # Handle gender properly
         gender_id = request.POST.get('gender', '').strip()
@@ -500,6 +541,9 @@ class UserUpdateProfileView(View):
         user.first_name = first_name
         user.last_name = last_name
         user.name = name
+        user.username = username
+        user.phone = phone
+        user.email = email if email else None
         
         # Location info (only for non-role 2 users)
         if user.role.id != 2:
@@ -1146,37 +1190,6 @@ class CityDeleteView(View):
         
         return redirect('city_list')
 
-############### Send email to sub-admin with details ###########################
-def send_sub_admin_detail(email, name,username,password,subject):
-    system_settings = SystemSettings.objects.first()
-    logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
-    context = {
-        'name': name,
-        'username': username,
-        'password': password,
-        'logo': logo,
-    }
-    # Render HTML template
-    html_content = render_to_string('Admin/Emails/Sub_Admin_Create.html', context)
-    
-    # Create plain text version (optional but recommended)
-    text_content = strip_tags(html_content)
-    
-    # Create email
-    email_msg = EmailMultiAlternatives(
-        subject,
-        text_content,
-        settings.DEFAULT_FROM_EMAIL,
-        [email]
-    )
-    email_msg.attach_alternative(html_content, "text/html")
-    
-    try:
-        email_msg.send()
-        return True
-    except Exception as e:
-        return False
-
 ########################## Sub Admin Views ###############################
 def get_states(request):
     """API endpoint to get all states for country_id=1"""
@@ -1619,6 +1632,7 @@ class ProductCategoryCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
         status = 'status' in request.POST  # Checkbox
+        image_file = request.FILES.get('image')
 
         # Validation
         if not name:
@@ -1634,6 +1648,31 @@ class ProductCategoryCreateView(View):
                 name=name,
                 status=status
             )
+
+            # Handle optional category image (single image)
+            if image_file:
+                # Basic validation similar to other uploads
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if image_file.content_type not in allowed_types:
+                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
+                    return redirect('product_category_list')
+
+                if image_file.size > 5 * 1024 * 1024:  # 5MB
+                    messages.error(request, "Image too large. Maximum size is 5MB.")
+                    return redirect('product_category_list')
+
+                # Generate unique filename
+                ext = os.path.splitext(image_file.name)[1].lstrip(".")
+                unique_filename = generate_unique_filename(f"category_{category.id}", ext)
+                file_path = os.path.join("category_images", unique_filename)
+
+                # Save file
+                default_storage.save(file_path, image_file)
+
+                # Attach to category and save
+                category.image = file_path
+                category.save()
+
             messages.success(request, "Product category created successfully")
 
         except Exception as e:
@@ -1648,29 +1687,69 @@ class ProductCategoryEditView(View):
             'id': category.id,
             'name': category.name,
             'status': category.status,
+            'image_url': category.image.url if category.image else None,
             'created_at': category.created_at.strftime('%Y-%m-%d %H:%M') if category.created_at else None,
             'updated_at': category.updated_at.strftime('%Y-%m-%d %H:%M') if category.updated_at else None
         })
     
     def post(self, request, pk):
         category = get_object_or_404(product_category, pk=pk)
-        
+
         name = request.POST.get('name')
         status = 'status' in request.POST
-        
+        image_file = request.FILES.get('image')
+        remove_image = request.POST.get('remove_image') == 'on'
+
         # Validation
         if not name:
             messages.error(request, "Category name is required")
             return redirect('product_category_list')
-            
+
         # Check if category name already exists (excluding current category)
         if product_category.objects.filter(name=name).exclude(pk=pk).exists():
             messages.error(request, "Category name already exists")
             return redirect('product_category_list')
-        
+
         try:
             category.name = name
             category.status = status
+
+            # Handle image removal
+            if remove_image and category.image:
+                # Delete existing file from storage
+                try:
+                    if default_storage.exists(category.image.name):
+                        default_storage.delete(category.image.name)
+                except Exception:
+                    pass
+                category.image = None
+
+            # Handle new image upload (replace existing)
+            if image_file:
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if image_file.content_type not in allowed_types:
+                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
+                    return redirect('product_category_list')
+
+                if image_file.size > 5 * 1024 * 1024:
+                    messages.error(request, "Image too large. Maximum size is 5MB.")
+                    return redirect('product_category_list')
+
+                # Delete old file if exists
+                if category.image:
+                    try:
+                        if default_storage.exists(category.image.name):
+                            default_storage.delete(category.image.name)
+                    except Exception:
+                        pass
+
+                # Save new file
+                ext = os.path.splitext(image_file.name)[1].lstrip(".")
+                unique_filename = generate_unique_filename(f"category_{category.id}", ext)
+                file_path = os.path.join("category_images", unique_filename)
+                default_storage.save(file_path, image_file)
+                category.image = file_path
+
             category.save()
             messages.success(request, "Product category updated successfully")
         except Exception as e:
@@ -1682,6 +1761,14 @@ class ProductCategoryDeleteView(View):
     def post(self, request, pk):
         category = get_object_or_404(product_category, pk=pk)
         try:
+            # Delete associated image file if exists
+            if category.image:
+                try:
+                    if default_storage.exists(category.image.name):
+                        default_storage.delete(category.image.name)
+                except Exception:
+                    pass
+
             category.delete()
             messages.success(request, "Product category deleted successfully")
         except Exception as e:

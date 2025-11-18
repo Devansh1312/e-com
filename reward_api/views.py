@@ -3,32 +3,22 @@
 # ========================================
 import os
 import random
-import string
-import time
-import base64
-from io import BytesIO
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone
-from django.core.cache import cache
 
 # ========================================
 # Django Core Framework Imports
 # ========================================
 from django.conf import settings
-from django.db import transaction
-from django.db.models import Sum, Q, Prefetch
-from django.core.mail import send_mail, EmailMultiAlternatives
+from django.db.models import Prefetch
+from django.core.mail import send_mail
 from django.core.files.storage import default_storage
 from django.core.paginator import EmptyPage
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
-from django.template.loader import render_to_string, get_template
+from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.timezone import now
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_date
 from django.utils.text import slugify
-from django.views import View
 
 # ========================================
 # Django REST Framework (DRF) Imports
@@ -323,7 +313,7 @@ def send_registration_otp(email, otp, system_settings, subject, request):
         logo = system_settings.website_logo if system_settings and system_settings.website_logo else ''
         logo_url = f"{settings.MEDIA_DOMAIN}{logo}" if logo else ''
         static_url = f"{settings.STATIC_DOMAIN}"
-        website_name = system_settings.website_name if system_settings and system_settings.website_name else 'Presidency Club'
+        website_name = system_settings.website_name if system_settings and system_settings.website_name else 'Kitchivo'
 
         # Prepare context for email template
         context = {
@@ -778,14 +768,18 @@ class DashboardAPI(APIView):
                 .order_by('-created_at')[:10]
             )
 
-            categories_data = [
-                {
+            categories_data = []
+            for category in categories_qs:
+                image_url = None
+                if getattr(category, 'image', None):
+                    image_url = _build_absolute_media_url(request, category.image.url)
+
+                categories_data.append({
                     'id': category.id,
                     'name': category.name,
                     'status': category.status,
-                }
-                for category in categories_qs
-            ]
+                    'image': image_url,
+                })
 
             latest_products_data = [
                 serialize_product_record(prod, request) for prod in latest_products_qs
@@ -1125,6 +1119,10 @@ class ProductCategoryWiseAPIView(APIView):
 
             product_data = [serialize_product_record(prod, request) for prod in products]
 
+            category_image = None
+            if getattr(category, 'image', None):
+                category_image = _build_absolute_media_url(request, category.image.url)
+
             return Response({
                 'status': 1,
                 'message': 'Product category wise data retrieved successfully.',
@@ -1132,6 +1130,7 @@ class ProductCategoryWiseAPIView(APIView):
                     'category': {
                         'id': category.id,
                         'name': category.name,
+                        'image': category_image,
                     },
                     'products': product_data
                 }

@@ -35,6 +35,7 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
+                                        <th>Image</th>
                                         <th>Name</th>
                                         <th>Status</th>
                                         <th>Created At</th>
@@ -46,6 +47,13 @@
                                     {% for category in categories %}
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            {% if category.image %}
+                                                <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                            {% else %}
+                                                <span class="text-muted small">No Image</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ category.name }}</td>
                                         <td>
                                             <span class="badge badge-{% if category.status %}success{% else %}danger{% endif %}">
@@ -65,7 +73,8 @@
                                                             <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
                                                             data-category-id="{{ category.id }}" 
                                                             data-category-name="{{ category.name }}"
-                                                            data-category-status="{% if category.status %}true{% else %}false{% endif %}"> Edit </a>
+                                                            data-category-status="{% if category.status %}true{% else %}false{% endif %}"
+                                                            data-category-image-url="{% if category.image %}{{ category.image.url }}{% endif %}"> Edit </a>
                                                         </li>
                                                         <li style="padding: 8px 12px; border-top: 1px solid #eee;">
                                                             <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal" data-category-id="{{ category.id }}">
@@ -94,7 +103,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="{% url 'product_category_create' %}" id="addCategoryForm">
+                        <form method="post" action="{% url 'product_category_create' %}" id="addCategoryForm" enctype="multipart/form-data">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-12 mb-3">
@@ -108,6 +117,11 @@
                                         <input class="form-check-input" type="checkbox" id="status" name="status" checked>
                                         <label class="form-check-label" for="status">Active</label>
                                     </div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="image" class="form-label">Category Image (single)</label>
+                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                    <small class="text-muted">Recommended size small square image. Max 5MB.</small>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">Add Category</button>
@@ -128,7 +142,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" id="editCategoryForm">
+                        <form method="post" id="editCategoryForm" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="hidden" id="categoryId" name="id">
                             <div class="row">
@@ -142,6 +156,19 @@
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="edit_status" name="status">
                                         <label class="form-check-label" for="edit_status">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Current Image</label>
+                                    <div class="mb-2">
+                                        <img id="edit_category_image_preview" src="" alt="Category Image" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; display: none;">
+                                        <span id="edit_no_image_text" class="text-muted small">No Image</span>
+                                    </div>
+                                    <label for="edit_image" class="form-label">Change Image</label>
+                                    <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
+                                        <label class="form-check-label" for="remove_image">Remove existing image</label>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -188,9 +215,9 @@
             let isValid = true;
             
             // Validate Name
-            const nameInput = form.find('#name, #edit_name');
-            const nameError = form.find('#name-error, #edit_name-error');
-            if (nameInput.val().trim() === '') {
+            const nameInput = form.find('input[name="name"]');
+            const nameError = form.find('.invalid-feedback').first();
+            if (!nameInput.val() || nameInput.val().trim() === '') {
                 nameInput.addClass('is-invalid');
                 nameError.text('Category name is required.');
                 isValid = false;
@@ -226,9 +253,9 @@
         });
 
         // Clear validation when user starts typing
-        $('#name, #edit_name').on('input', function() {
+        $('input[name="name"]').on('input', function() {
             $(this).removeClass('is-invalid');
-            $(this).siblings('.invalid-feedback').text('');
+            $(this).closest('.mb-3').find('.invalid-feedback').text('');
         });
 
         // Edit Category Modal initialization
@@ -237,6 +264,7 @@
             var categoryId = button.data('category-id');
             var name = button.data('category-name');
             var status = button.data('category-status');
+            var imageUrl = button.data('category-image-url');
             
             var form = $('#editCategoryForm');
             form.attr('action', "{% url 'product_category_edit' 0 %}".replace("0", categoryId));
@@ -245,6 +273,18 @@
             
             // Set checkbox status
             form.find('#edit_status').prop('checked', status === 'true');
+            
+            // Set image preview
+            var imgEl = $('#edit_category_image_preview');
+            var noImgEl = $('#edit_no_image_text');
+            $('#remove_image').prop('checked', false);
+            if (imageUrl) {
+                imgEl.attr('src', imageUrl).show();
+                noImgEl.hide();
+            } else {
+                imgEl.hide();
+                noImgEl.show();
+            }
         });
 
         // Delete Category Modal

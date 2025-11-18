@@ -188,6 +188,13 @@ class FAQ(models.Model):
     
 class product_category(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
+    # Single image per category (optional)
+    image = models.ImageField(
+        upload_to="category_images/",
+        null=True,
+        blank=True,
+        help_text="Single image representing this category"
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  

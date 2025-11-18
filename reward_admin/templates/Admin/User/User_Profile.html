@@ -26,10 +26,11 @@
                                 {% else %}
                                     <img alt="Default Profile Picture" src="{% static 'assets/images/dashboard/User.png' %}" class="profile-pic-img">
                                 {% endif %}
+                                <a href="{% url 'edit_profile' %}" class="icon-wrapper">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </a>
                             </div>
-                            <a href="{% url 'edit_profile' %}" class="icon-wrapper">
-                                <i class="fas fa-pencil-alt"></i>
-                            </a>
+                           
                         </div>
                         <div class="info">
                             <div class="user-designation text-center mb-4">
@@ -199,6 +200,7 @@
 }
 
 .user-image .avatar {
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -208,8 +210,8 @@
 
 .icon-wrapper {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    bottom: 8px;
+    right: 8px;
     background: white;
     border-radius: 50%;
     width: 40px;
@@ -223,11 +225,11 @@
     transition: all 0.3s ease;
 }
 
-.icon-wrapper:hover {
+/* .icon-wrapper:hover {
     background: #7366ff;
     color: white;
     transform: scale(1.1);
-}
+} */
 
 .card {
     border-radius: 10px;

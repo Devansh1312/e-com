@@ -234,31 +234,204 @@
         <div class="page-title">
         </div>
         
-        <!-- User Statistics -->
+        <!-- Top Statistics -->
         <div class="row g-3">
-            
+            <!-- Total Users -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/users.png' %}" alt="Users">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_users|default:"0" }}</div>
+                        <div class="stats-label">Total Users</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Users -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/active-users.png' %}" alt="Active Users">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ active_users|default:"0" }}</div>
+                        <div class="stats-label">Active Users</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Customer Users -->
             <div class="col-6 col-sm-6 col-md-3">
-                <a href="{% url 'customer_user_list' %}">
-                    <div class="stats-card animate__animated animate__fadeIn" data-delay="200">
-                        <div class="stats-icon">
-                            <img src="{% static 'assets/images/dashboard/sub-admins.png' %}" alt="Sub-Admins">
-                        </div>
-                        <div class="stats-content">
-                            <div class="stats-number">{{ total_customer_users }}</div>
-                            <div class="stats-label">Customer Users</div>
-                        </div>
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/customers.png' %}" alt="Customers">
                     </div>
-                </a>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_customer_users|default:"0" }}</div>
+                        <div class="stats-label">Customer Users</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inactive Users -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/inactive-users.png' %}" alt="Inactive Users">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ inactive_users|default:"0" }}</div>
+                        <div class="stats-label">Inactive Users</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product & Engagement Statistics -->
+        <div class="row g-3 mt-2">
+            <!-- Total Products -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/products.png' %}" alt="Products">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_products|default:"0" }}</div>
+                        <div class="stats-label">Total Products</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Products -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/active-products.png' %}" alt="Active Products">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ active_products|default:"0" }}</div>
+                        <div class="stats-label">Active Products</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Categories -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/categories.png' %}" alt="Categories">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_categories|default:"0" }}</div>
+                        <div class="stats-label">Product Categories</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Variants -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/variants.png' %}" alt="Variants">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_variants|default:"0" }}</div>
+                        <div class="stats-label">Product Variants</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+            <!-- Reviews -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/reviews.png' %}" alt="Reviews">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_reviews|default:"0" }}</div>
+                        <div class="stats-label">Customer Reviews</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Rating -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/rating.png' %}" alt="Rating">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ average_rating|default:"0" }}</div>
+                        <div class="stats-label">Average Rating</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wishlist Items -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/wishlist.png' %}" alt="Wishlist">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_wishlist_items|default:"0" }}</div>
+                        <div class="stats-label">Wishlist Items</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Items -->
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon">
+                        <img src="{% static 'assets/images/dashboard/cart.png' %}" alt="Cart Items">
+                    </div>
+                    <div class="stats-content">
+                        <div class="stats-number">{{ total_cart_items|default:"0" }}</div>
+                        <div class="stats-label">Cart Items</div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Charts Section -->
-        <div class="card mt-4">
-            <div class="card-body">
-                <h4 class="mb-4">Club Management Analytics</h4>
-                <div class="row g-4">
-                
+        <div class="row g-4 mt-4">
+            <div class="col-12 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="mb-3">Products by Category</h4>
+                        <div class="chart-container" style="height: 320px;">
+                            <canvas id="productCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="mb-3">Rating Distribution</h4>
+                        <div class="chart-container" style="height: 320px;">
+                            <canvas id="ratingDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-4">
+            <div class="col-12 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="mb-3">Users by Role</h4>
+                        <div class="chart-container" style="height: 320px;">
+                            <canvas id="userRoleChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -276,7 +449,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Color palette based on your club theme
+        // Color palette
         const colors = {
             primary: '#E44044',    // Red
             secondary: '#FAA938',  // Orange  
@@ -286,299 +459,175 @@
             danger: '#dc3545'      // Red
         };
 
-        // User Distribution Doughnut Chart
-        const userDistCtx = document.getElementById('userDistributionChart').getContext('2d');
-        const userDistributionChart = new Chart(userDistCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Club Members', 'Sub-Admins', 'Ticket Scanners'],
-                datasets: [{
-                    data: [
-                        {{ total_club_members|default:"0" }}, 
-                        {{ total_sub_admins|default:"0" }}, 
-                        {{ total_attendance_takers|default:"0" }}
-                    ],
-                    backgroundColor: [colors.primary, colors.secondary, colors.accent],
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 15,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 12
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((value / total) * 100);
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
+        // Helper to safely get canvas context
+        function getCtx(id) {
+            const el = document.getElementById(id);
+            return el ? el.getContext('2d') : null;
+        }
+
+        // ============================
+        // Products by Category Chart
+        // ============================
+        const categoryCtx = getCtx('productCategoryChart');
+        if (categoryCtx) {
+            const categoryLabels = {{ category_labels|safe|default:"[]" }};
+            const categoryCounts = {{ category_counts|safe|default:"[]" }};
+
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryCounts,
+                        backgroundColor: [
+                            colors.primary,
+                            colors.secondary,
+                            colors.accent,
+                            colors.success,
+                            colors.warning,
+                            colors.danger
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        hoverOffset: 10
+                    }]
                 },
-                cutout: '70%'
-            }
-        });
-
-        // Event Booking Status Pie Chart
-        const eventBookingCtx = document.getElementById('eventBookingChart').getContext('2d');
-        const eventBookingChart = new Chart(eventBookingCtx, {
-            type: 'pie',
-            data: {
-                labels: ['Successful Bookings', 'Pending Bookings', 'Failed Bookings'],
-                datasets: [{
-                    data: [
-                        {{ successful_bookings|default:"0" }}, 
-                        {{ pending_bookings|default:"0" }}, 
-                        {{ failed_bookings|default:"0" }}
-                    ],
-                    backgroundColor: [colors.success, colors.warning, colors.danger],
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 15,
-                            font: {
-                                size: 12
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
                             }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
                         },
-                        bodyFont: {
-                            size: 12
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Request Status Overview Chart
-        const requestStatusCtx = document.getElementById('requestStatusChart').getContext('2d');
-
-        const requestStatusChart = new Chart(requestStatusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: [
-                    'Pending', 'Approved', 'Rejected',
-                ],
-                datasets: [{
-                    data: [
-                        {{ affiliate_requests_pending|default:"0" }},
-                        {{ affiliate_requests_approved|default:"0" }},
-                        {{ affiliate_requests_rejected|default:"0" }},
-                    ],
-                    backgroundColor: [
-                        colors.warning,    // Affiliate Pending
-                        colors.success,    // Affiliate Approved  
-                        colors.danger,     // Affiliate Rejected
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 10,
-                            font: {
-                                size: 10
-                            }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 12
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                cutout: '70%'
-            }
-        });
-
-        // Monthly Revenue Line Chart
-        // Monthly Revenue Line Chart
-        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-        const monthlyLabels = {{ monthly_labels|safe|default:"[]" }};
-        const monthlyEventRevenue = {{ monthly_event_revenue|safe|default:"[]" }};
-        const monthlyMaintenanceRevenue = {{ monthly_maintenance_revenue|safe|default:"[]" }};
-
-        const revenueChart = new Chart(revenueCtx, {
-            type: 'line',
-            data: {
-                labels: monthlyLabels,
-                datasets: [
-                    {
-                        label: 'Event Bookings (₹)',
-                        data: monthlyEventRevenue,
-                        borderColor: colors.primary, // Red
-                        backgroundColor: 'rgba(228, 64, 68, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: colors.primary,
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    },
-                    {
-                        label: 'Maintenance (₹)',
-                        data: monthlyMaintenanceRevenue,
-                        borderColor: colors.accent, // Blue
-                        backgroundColor: 'rgba(44, 128, 180, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: colors.accent,
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                plugins: {
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 12
-                        },
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ₹' + context.raw.toLocaleString();
-                            }
-                        }
-                    },
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 12,
-                            padding: 15,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return '₹' + value.toLocaleString();
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
                             },
-                            font: {
+                            bodyFont: {
                                 size: 12
                             }
                         }
                     },
-                    x: {
-                        grid: {
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // ============================
+        // Rating Distribution Chart
+        // ============================
+        const ratingCtx = getCtx('ratingDistributionChart');
+        if (ratingCtx) {
+            const ratingLabels = {{ rating_labels|safe|default:"[]" }};
+            const ratingCounts = {{ rating_counts|safe|default:"[]" }};
+
+            new Chart(ratingCtx, {
+                type: 'bar',
+                data: {
+                    labels: ratingLabels,
+                    datasets: [{
+                        label: 'Number of Reviews',
+                        data: ratingCounts,
+                        backgroundColor: colors.accent,
+                        borderColor: colors.accent,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
                             display: false
                         },
-                        ticks: {
-                            font: {
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 12
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================
+        // Users by Role Chart
+        // ============================
+        const roleCtx = getCtx('userRoleChart');
+        if (roleCtx) {
+            const roleLabels = {{ role_labels|safe|default:"[]" }};
+            const roleCounts = {{ role_counts|safe|default:"[]" }};
+
+            new Chart(roleCtx, {
+                type: 'pie',
+                data: {
+                    labels: roleLabels,
+                    datasets: [{
+                        data: roleCounts,
+                        backgroundColor: [
+                            colors.primary,
+                            colors.secondary,
+                            colors.accent,
+                            colors.success,
+                            colors.warning,
+                            colors.danger
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
                                 size: 12
                             }
                         }
                     }
                 }
-            }
-        });
-
-        // Resize function for charts
-        function resizeCharts() {
-            if (typeof userDistributionChart !== 'undefined') userDistributionChart.resize();
-            if (typeof eventBookingChart !== 'undefined') eventBookingChart.resize();
-            if (typeof requestStatusChart !== 'undefined') requestStatusChart.resize();
-            if (typeof revenueChart !== 'undefined') revenueChart.resize();
+            });
         }
-        
-        window.addEventListener('resize', function() {
-            clearTimeout(window.resizeTimeout);
-            window.resizeTimeout = setTimeout(resizeCharts, 200);
-        });
     });
 </script>
 {% endblock %}

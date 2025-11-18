@@ -120,26 +120,46 @@
                                 <!-- Contact Info -->
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Username</label>
-                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
-                                            {{ user.username }}
-                                        </p>
+                                        <label class="form-label">Username <span class="text-danger">*</span></label>
+                                        <input type="text"
+                                               class="form-control {% if errors.username %}is-invalid{% endif %}"
+                                               name="username"
+                                               value="{{ user.username }}"
+                                               required>
+                                        {% if errors.username %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.username.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Phone</label>
-                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
-                                            {{ user.phone }}
-                                        </p>
+                                        <label class="form-label">Phone <span class="text-danger">*</span></label>
+                                        <input type="text"
+                                               class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                                               name="phone"
+                                               value="{{ user.phone }}"
+                                               required>
+                                        {% if errors.phone %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.phone.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-12">
                                     <div class="mb-3">
                                         <label class="form-label">Email address</label>
-                                        <p class="form-control-plaintext" style="border: 1px solid #dee2e6; padding: 0.375rem 0.75rem; font-weight: bold;">
-                                            {{ user.email }}
-                                        </p>
+                                        <input type="email"
+                                               class="form-control {% if errors.email %}is-invalid{% endif %}"
+                                               name="email"
+                                               value="{{ user.email }}">
+                                        {% if errors.email %}
+                                        <div class="invalid-feedback">
+                                            {{ errors.email.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 
@@ -308,23 +328,6 @@
     </div>
 </div>
 
-<!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-success">Success</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Your profile has been updated successfully!</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block script %}
@@ -500,11 +503,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    $('#successModal').modal('show');
-                    // Reload page after modal is closed
-                    $('#successModal').on('hidden.bs.modal', function () {
-                        window.location.reload();
-                    });
+                    window.location.reload();
                 } else {
                     // Display form errors
                     if (response.errors) {
