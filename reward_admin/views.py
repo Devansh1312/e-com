@@ -1015,8 +1015,6 @@ class CityListView(LoginRequiredMixin, View):
         data = []
         for index, city in enumerate(cities):
             # Check permissions
-            can_edit = request.user.has_permission('city_list')
-            can_delete = request.user.has_permission('city_list')
             
             # Build actions HTML based on permissions
             actions_html = """
@@ -1029,36 +1027,35 @@ class CityListView(LoginRequiredMixin, View):
             """
             
             # Edit action
-            if can_edit:
-                status_str = 'true' if city.status else 'false'
-                actions_html += f"""
-                        <li style="padding: 8px 12px;">
-                            <a style="font-size: small" href="#" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#editCityModal"
-                                data-city-id="{city.id}"
-                                data-city-name="{city.name}"
-                                data-state-id="{city.state.id if city.state else ''}"
-                                data-city-status="{status_str}"
-                                class="text-decoration-none">
-                                Edit
-                            </a>
-                        </li>
-                """
+        
+            status_str = 'true' if city.status else 'false'
+            actions_html += f"""
+                    <li style="padding: 8px 12px;">
+                        <a style="font-size: small" href="#" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#editCityModal"
+                            data-city-id="{city.id}"
+                            data-city-name="{city.name}"
+                            data-state-id="{city.state.id if city.state else ''}"
+                            data-city-status="{status_str}"
+                            class="text-decoration-none">
+                            Edit
+                        </a>
+                    </li>
+            """
             
             # Delete action
-            if can_delete:
-                actions_html += f"""
-                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
-                            <a style="font-size: small;" href="#" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#deleteCityModal" 
-                                data-city-id="{city.id}"
-                                class="text-decoration-none">
-                                Delete
-                            </a>
-                        </li>
-                """
+            actions_html += f"""
+                    <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                        <a style="font-size: small;" href="#" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteCityModal" 
+                            data-city-id="{city.id}"
+                            class="text-decoration-none">
+                            Delete
+                        </a>
+                    </li>
+            """
             
             actions_html += """
                     </ul>
@@ -1241,7 +1238,7 @@ class CustomerUserListView(LoginRequiredMixin, View):
         User = get_user_model()
         
         # Base queryset - all customer users (assuming role_id=3 for customers)
-        queryset = User.objects.filter(role_id=3)
+        queryset = User.objects.filter(role_id=2)
         
         # Apply sorting if the column is sortable
         if order_column_index in column_map:
@@ -1273,7 +1270,7 @@ class CustomerUserListView(LoginRequiredMixin, View):
                 queryset = User.objects.none()
 
         # Get total records count (without filters)
-        total_records = User.objects.filter(role_id=3).count()
+        total_records = User.objects.filter(role_id=2).count()
         
         # Get filtered count (with search filters applied)
         filtered_records = queryset.count()
@@ -1294,9 +1291,7 @@ class CustomerUserListView(LoginRequiredMixin, View):
             
             # Get full name
             full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or customer.name or 'N/A'
-            
-            # Check permissions
-            can_toggle_status = request.user.has_permission('customer_edit')
+                
             
             # Build actions HTML based on permissions
             actions_html = """
@@ -1308,15 +1303,14 @@ class CustomerUserListView(LoginRequiredMixin, View):
                     <ul style="list-style: none; padding: 0; margin: 0;">
             """
             
-            # Toggle status action
-            if can_toggle_status:
-                actions_html += f"""
-                        <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
-                            <a href="#" class="toggle-status text-decoration-none" data-id="{customer.id}" data-status="{'deactivate' if customer.is_active else 'activate'}">
-                                {'Deactivate' if customer.is_active else 'Activate'}
-                            </a>
-                        </li>
-                """
+            
+            actions_html += f"""
+                    <li style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: small;">
+                        <a href="#" class="toggle-status text-decoration-none" data-id="{customer.id}" data-status="{'deactivate' if customer.is_active else 'activate'}">
+                            {'Deactivate' if customer.is_active else 'Activate'}
+                        </a>
+                    </li>
+            """
             
             # View action
             actions_html += f"""
@@ -1364,7 +1358,7 @@ class CustomerDetailView(LoginRequiredMixin, View):
     def get(self, request, pk):
         try:
             User = get_user_model()
-            customer = User.objects.get(id=pk, role_id=3)  # Ensure it's a customer
+            customer = User.objects.get(id=pk, role_id=2)  # Ensure it's a customer
             
             return render(
                 request,
@@ -1386,14 +1380,8 @@ class CustomerDetailView(LoginRequiredMixin, View):
 class CustomerToggleStatusView(LoginRequiredMixin, View):
     def post(self, request, pk):
         User = get_user_model()
-        customer = get_object_or_404(User, pk=pk, role_id=3)
+        customer = get_object_or_404(User, pk=pk, role_id=2)
         
-        # Check permission
-        if not request.user.has_permission('customer_edit'):
-            return JsonResponse({
-                'success': False,
-                'message': 'You do not have permission to perform this action'
-            }, status=403)
         
         try:
             customer.is_active = not customer.is_active
@@ -1473,6 +1461,149 @@ class FAQDeleteView(LoginRequiredMixin, View):
         faq.delete()
         messages.success(request, "FAQ deleted successfully.")
         return redirect("faq_list")
+
+
+############################## Size CRUD #####################################
+class SizeListView(LoginRequiredMixin, View):
+    template_name = "Admin/General_Settings/Size.html"
+
+    def get(self, request):
+        sizes = Size.objects.all().order_by('name')
+        return render(
+            request,
+            self.template_name,
+            {
+                "sizes": sizes,
+                "breadcrumb": {"child": "Size Management"},
+            },
+        )
+
+
+class SizeCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        name = (request.POST.get("name") or "").strip()
+        status = "status" in request.POST
+
+        if not name:
+            messages.error(request, "Size name is required.")
+            return redirect("size_list")
+
+        if Size.objects.filter(name__iexact=name).exists():
+            messages.error(request, "Size with this name already exists.")
+            return redirect("size_list")
+
+        Size.objects.create(name=name, status=status)
+        messages.success(request, "Size created successfully.")
+        return redirect("size_list")
+
+
+class SizeEditView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        size = get_object_or_404(Size, pk=pk)
+        name = (request.POST.get("name") or "").strip()
+        status = "status" in request.POST
+
+        if not name:
+            messages.error(request, "Size name is required.")
+            return redirect("size_list")
+
+        if Size.objects.filter(name__iexact=name).exclude(pk=pk).exists():
+            messages.error(request, "Size with this name already exists.")
+            return redirect("size_list")
+
+        size.name = name
+        size.status = status
+        size.save()
+        messages.success(request, "Size updated successfully.")
+        return redirect("size_list")
+
+
+class SizeDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        size = get_object_or_404(Size, pk=pk)
+        size.delete()
+        messages.success(request, "Size deleted successfully.")
+        return redirect("size_list")
+
+
+############################## Color CRUD ####################################
+class ColorListView(LoginRequiredMixin, View):
+    template_name = "Admin/General_Settings/Color.html"
+
+    def get(self, request):
+        colors = Color.objects.all().order_by('name')
+        return render(
+            request,
+            self.template_name,
+            {
+                "colors": colors,
+                "breadcrumb": {"child": "Color Management"},
+            },
+        )
+
+
+class ColorCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        name = (request.POST.get("name") or "").strip()
+        hex_code = (request.POST.get("hex_code") or "").strip()
+        status = "status" in request.POST
+
+        if not name:
+            messages.error(request, "Color name is required.")
+            return redirect("color_list")
+
+        if hex_code and not hex_code.startswith("#"):
+            hex_code = f"#{hex_code}"
+
+        if Color.objects.filter(name__iexact=name).exists():
+            messages.error(request, "Color with this name already exists.")
+            return redirect("color_list")
+
+        if hex_code and Color.objects.filter(hex_code__iexact=hex_code).exists():
+            messages.error(request, "Color with this hex code already exists.")
+            return redirect("color_list")
+
+        Color.objects.create(name=name, hex_code=hex_code or None, status=status)
+        messages.success(request, "Color created successfully.")
+        return redirect("color_list")
+
+
+class ColorEditView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        color = get_object_or_404(Color, pk=pk)
+        name = (request.POST.get("name") or "").strip()
+        hex_code = (request.POST.get("hex_code") or "").strip()
+        status = "status" in request.POST
+
+        if not name:
+            messages.error(request, "Color name is required.")
+            return redirect("color_list")
+
+        if hex_code and not hex_code.startswith("#"):
+            hex_code = f"#{hex_code}"
+
+        if Color.objects.filter(name__iexact=name).exclude(pk=pk).exists():
+            messages.error(request, "Color with this name already exists.")
+            return redirect("color_list")
+
+        if hex_code and Color.objects.filter(hex_code__iexact=hex_code).exclude(pk=pk).exists():
+            messages.error(request, "Color with this hex code already exists.")
+            return redirect("color_list")
+
+        color.name = name
+        color.hex_code = hex_code or None
+        color.status = status
+        color.save()
+        messages.success(request, "Color updated successfully.")
+        return redirect("color_list")
+
+
+class ColorDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        color = get_object_or_404(Color, pk=pk)
+        color.delete()
+        messages.success(request, "Color deleted successfully.")
+        return redirect("color_list")
 
 
 ################### Product Category CRUD #########################################
@@ -1563,11 +1694,15 @@ class ProductCategoryDeleteView(View):
 
 class ProductListView(View):
     def get(self, request):
-        products = product.objects.all().select_related('category').prefetch_related('images').order_by('-created_at')
+        products = product.objects.all().select_related('category').prefetch_related('images', 'variants').order_by('-created_at')
         categories = product_category.objects.filter(status=True)
+        sizes = Size.objects.filter(status=True)
+        colors = Color.objects.filter(status=True)
         return render(request, 'Admin/Product/Product_List.html', {
             'products': products,
             'categories': categories,
+            'sizes': sizes,
+            'colors': colors,
             'breadcrumb': {'child': 'Product Management'}
         })
 
@@ -1581,6 +1716,13 @@ class ProductCreateView(View):
         url = request.POST.get('url')
         status = 'status' in request.POST
         image_files = request.FILES.getlist('images')
+        
+        # Variant data
+        variants_data = request.POST.get('variants_data', '[]')
+        try:
+            variants_json = json.loads(variants_data)
+        except:
+            variants_json = []
 
         # Validation
         if not name:
@@ -1604,16 +1746,16 @@ class ProductCreateView(View):
                     status=status
                 )
 
-                # Handle multiple image uploads
+                # Handle common images (images without variant)
                 for image_file in image_files:
                     if image_file:
                         # Validate file type
                         allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
                         if image_file.content_type not in allowed_types:
-                            continue  # Skip invalid files
+                            continue
                         
                         if image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                            continue  # Skip files that are too large
+                            continue
 
                         # Generate unique filename
                         ext = os.path.splitext(image_file.name)[1]
@@ -1623,11 +1765,70 @@ class ProductCreateView(View):
                         # Save file
                         default_storage.save(file_path, image_file)
                         
-                        # Create product image record
+                        # Create common product image (no variant)
                         product_image.objects.create(
                             product=product_obj,
+                            variant=None,
                             image=file_path
                         )
+
+                # Handle variants
+                for variant_data in variants_json:
+                    size_id = variant_data.get('size_id')
+                    color_id = variant_data.get('color_id')
+                    stock_quantity = variant_data.get('stock_quantity', 0)
+                    sku = variant_data.get('sku', '')
+                    variant_status = variant_data.get('status', True)
+                    variant_images = variant_data.get('images', [])
+                    
+                    # Create or get variant
+                    variant_obj, created = product_variant.objects.get_or_create(
+                        product=product_obj,
+                        size_id=size_id if size_id else None,
+                        color_id=color_id if color_id else None,
+                        defaults={
+                            'stock_quantity': stock_quantity,
+                            'sku': sku,
+                            'status': variant_status
+                        }
+                    )
+                    
+                    if not created:
+                        variant_obj.stock_quantity = stock_quantity
+                        variant_obj.sku = sku
+                        variant_obj.status = variant_status
+                        variant_obj.save()
+                    
+                    # Handle variant-specific images
+                    for img_index in variant_images:
+                        img_key = f'variant_images_{size_id}_{color_id}_{img_index}'
+                        variant_image_files = request.FILES.getlist(img_key)
+                        
+                        for variant_image_file in variant_image_files:
+                            if variant_image_file:
+                                # Validate file type
+                                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                                if variant_image_file.content_type not in allowed_types:
+                                    continue
+                                
+                                if variant_image_file.size > 5 * 1024 * 1024:  # 5MB limit
+                                    continue
+
+                                # Generate unique filename
+                                ext = os.path.splitext(variant_image_file.name)[1]
+                                unique_filename = generate_unique_filename(f"product_{product_obj.id}_variant_{variant_obj.id}", ext.lstrip("."))
+                                file_path = os.path.join("product_images", unique_filename)
+                                
+                                # Save file
+                                default_storage.save(file_path, variant_image_file)
+                                
+                                # Create variant-specific image
+                                product_image.objects.create(
+                                    product=product_obj,
+                                    variant=variant_obj,
+                                    image=file_path,
+                                    is_primary=(img_index == 0)  # First image is primary
+                                )
 
                 messages.success(request, "Product created successfully")
 
@@ -1639,7 +1840,31 @@ class ProductCreateView(View):
 class ProductEditView(View):
     def get(self, request, pk):
         product_obj = get_object_or_404(product, pk=pk)
-        images = product_obj.images.all()
+        images = product_obj.images.filter(variant__isnull=True)  # Common images only
+        variants = product_obj.variants.all().select_related('size', 'color').prefetch_related('images')
+        
+        variants_data = []
+        for variant in variants:
+            variant_images = []
+            for img in variant.images.all():
+                variant_images.append({
+                    'id': img.id,
+                    'url': img.image.url if img.image else None,
+                    'name': os.path.basename(img.image.name) if img.image else None,
+                    'is_primary': img.is_primary
+                })
+            
+            variants_data.append({
+                'id': variant.id,
+                'size_id': variant.size.id if variant.size else None,
+                'size_name': variant.size.name if variant.size else None,
+                'color_id': variant.color.id if variant.color else None,
+                'color_name': variant.color.name if variant.color else None,
+                'stock_quantity': variant.stock_quantity,
+                'sku': variant.sku,
+                'status': variant.status,
+                'images': variant_images
+            })
         
         return JsonResponse({
             'id': product_obj.id,
@@ -1656,7 +1881,8 @@ class ProductEditView(View):
                     'url': img.image.url if img.image else None,
                     'name': os.path.basename(img.image.name) if img.image else None
                 } for img in images
-            ]
+            ],
+            'variants': variants_data
         })
     
     def post(self, request, pk):
@@ -1671,6 +1897,13 @@ class ProductEditView(View):
         status = 'status' in request.POST
         new_images = request.FILES.getlist('new_images')
         delete_images = request.POST.getlist('delete_images')
+        
+        # Variant data
+        variants_data = request.POST.get('variants_data', '[]')
+        try:
+            variants_json = json.loads(variants_data)
+        except:
+            variants_json = []
 
         # Validation
         if not name:
@@ -1693,10 +1926,10 @@ class ProductEditView(View):
                 product_obj.status = status
                 product_obj.save()
 
-                # Delete selected images
+                # Delete selected common images
                 for image_id in delete_images:
                     try:
-                        img = product_image.objects.get(id=image_id, product=product_obj)
+                        img = product_image.objects.get(id=image_id, product=product_obj, variant__isnull=True)
                         if img.image:
                             if default_storage.exists(img.image.name):
                                 default_storage.delete(img.image.name)
@@ -1704,7 +1937,7 @@ class ProductEditView(View):
                     except product_image.DoesNotExist:
                         continue
 
-                # Add new images
+                # Add new common images
                 for image_file in new_images:
                     if image_file:
                         # Validate file type
@@ -1717,18 +1950,119 @@ class ProductEditView(View):
 
                         # Generate unique filename
                         ext = os.path.splitext(image_file.name)[1]
-                        
                         unique_filename = generate_unique_filename(f"product_{product_obj.id}", ext.lstrip("."))
                         file_path = os.path.join("product_images", unique_filename)
                         
                         # Save file
                         default_storage.save(file_path, image_file)
                         
-                        # Create product image record
+                        # Create common product image (no variant)
                         product_image.objects.create(
                             product=product_obj,
+                            variant=None,
                             image=file_path
                         )
+
+                # Handle variants
+                existing_variant_ids = set()
+                for variant_data in variants_json:
+                    variant_id = variant_data.get('id')
+                    size_id = variant_data.get('size_id')
+                    color_id = variant_data.get('color_id')
+                    stock_quantity = variant_data.get('stock_quantity', 0)
+                    sku = variant_data.get('sku', '')
+                    variant_status = variant_data.get('status', True)
+                    delete_variant_images = variant_data.get('delete_images', [])
+                    variant_images = variant_data.get('images', [])
+                    
+                    # Delete variant images
+                    for img_id in delete_variant_images:
+                        try:
+                            img = product_image.objects.get(id=img_id, product=product_obj)
+                            if img.image:
+                                if default_storage.exists(img.image.name):
+                                    default_storage.delete(img.image.name)
+                            img.delete()
+                        except product_image.DoesNotExist:
+                            continue
+                    
+                    # Update or create variant
+                    if variant_id:
+                        try:
+                            variant_obj = product_variant.objects.get(id=variant_id, product=product_obj)
+                            variant_obj.size_id = size_id if size_id else None
+                            variant_obj.color_id = color_id if color_id else None
+                            variant_obj.stock_quantity = stock_quantity
+                            variant_obj.sku = sku
+                            variant_obj.status = variant_status
+                            variant_obj.save()
+                            existing_variant_ids.add(variant_obj.id)
+                        except product_variant.DoesNotExist:
+                            variant_obj = product_variant.objects.create(
+                                product=product_obj,
+                                size_id=size_id if size_id else None,
+                                color_id=color_id if color_id else None,
+                                stock_quantity=stock_quantity,
+                                sku=sku,
+                                status=variant_status
+                            )
+                            existing_variant_ids.add(variant_obj.id)
+                    else:
+                        variant_obj, created = product_variant.objects.get_or_create(
+                            product=product_obj,
+                            size_id=size_id if size_id else None,
+                            color_id=color_id if color_id else None,
+                            defaults={
+                                'stock_quantity': stock_quantity,
+                                'sku': sku,
+                                'status': variant_status
+                            }
+                        )
+                        if not created:
+                            variant_obj.stock_quantity = stock_quantity
+                            variant_obj.sku = sku
+                            variant_obj.status = variant_status
+                            variant_obj.save()
+                        existing_variant_ids.add(variant_obj.id)
+                    
+                    # Handle variant-specific images
+                    for img_index in variant_images:
+                        img_key = f'variant_images_{size_id}_{color_id}_{img_index}'
+                        variant_image_files = request.FILES.getlist(img_key)
+                        
+                        for variant_image_file in variant_image_files:
+                            if variant_image_file:
+                                # Validate file type
+                                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                                if variant_image_file.content_type not in allowed_types:
+                                    continue
+                                
+                                if variant_image_file.size > 5 * 1024 * 1024:  # 5MB limit
+                                    continue
+
+                                # Generate unique filename
+                                ext = os.path.splitext(variant_image_file.name)[1]
+                                unique_filename = generate_unique_filename(f"product_{product_obj.id}_variant_{variant_obj.id}", ext.lstrip("."))
+                                file_path = os.path.join("product_images", unique_filename)
+                                
+                                # Save file
+                                default_storage.save(file_path, variant_image_file)
+                                
+                                # Create variant-specific image
+                                product_image.objects.create(
+                                    product=product_obj,
+                                    variant=variant_obj,
+                                    image=file_path,
+                                    is_primary=(img_index == 0)
+                                )
+                
+                # Delete variants that are not in the updated list
+                all_variants = product_variant.objects.filter(product=product_obj)
+                for variant in all_variants:
+                    if variant.id not in existing_variant_ids:
+                        # Delete variant images first
+                        variant.images.all().delete()
+                        variant.delete()
 
                 messages.success(request, "Product updated successfully")
         except Exception as e:

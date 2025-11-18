@@ -63,6 +63,25 @@
         top: 2px;
         right: 2px;
     }
+    .variant-card {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #f9f9f9;
+    }
+    .variant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .variant-images-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
 </style>
 <!-- Plugins css Ends-->
 {% endblock %}
@@ -197,12 +216,22 @@
                                     <input type="url" class="form-control" id="url" name="url" placeholder="https://example.com/product">
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="images" class="form-label">Product Images</label>
+                                    <label for="images" class="form-label">Common Product Images</label>
                                     <input type="file" class="form-control" id="images" name="images" multiple accept="image/*">
-                                    <small class="text-muted">You can select multiple images. Maximum file size: 5MB each.</small>
+                                    <small class="text-muted">Common images shared across all variants. Maximum file size: 5MB each.</small>
                                     <div class="image-preview-container" id="imagePreview"></div>
                                     <div class="invalid-feedback" id="images-error"></div>
                                 </div>
+                                
+                                <!-- Variants Section -->
+                                <div class="col-md-12 mb-3">
+                                    <hr>
+                                    <h6>Product Variants (Size & Color)</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="addVariantBtn">+ Add Variant</button>
+                                    <div id="variantsContainer"></div>
+                                    <input type="hidden" id="variants_data" name="variants_data" value="[]">
+                                </div>
+                                
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Status</label>
                                     <div class="form-check form-switch">
@@ -269,11 +298,21 @@
                                     <div class="current-images" id="currentImages"></div>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="edit_images" class="form-label">Add New Images</label>
+                                    <label for="edit_images" class="form-label">Add New Common Images</label>
                                     <input type="file" class="form-control" id="edit_images" name="new_images" multiple accept="image/*">
-                                    <small class="text-muted">You can select multiple images. Maximum file size: 5MB each.</small>
+                                    <small class="text-muted">Common images shared across all variants. Maximum file size: 5MB each.</small>
                                     <div class="image-preview-container" id="editImagePreview"></div>
                                 </div>
+                                
+                                <!-- Variants Section for Edit -->
+                                <div class="col-md-12 mb-3">
+                                    <hr>
+                                    <h6>Product Variants (Size & Color)</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="addEditVariantBtn">+ Add Variant</button>
+                                    <div id="editVariantsContainer"></div>
+                                    <input type="hidden" id="edit_variants_data" name="variants_data" value="[]">
+                                </div>
+                                
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Status</label>
                                     <div class="form-check form-switch">
@@ -417,6 +456,10 @@
             $(this).find('form')[0].reset();
             $(this).find('.image-preview-container').empty();
             $('#currentImages').empty();
+            $('#variantsContainer').empty();
+            $('#editVariantsContainer').empty();
+            variantCounter = 0;
+            editVariantCounter = 0;
         });
 
         // Clear validation when user starts typing
@@ -425,52 +468,6 @@
             $(this).siblings('.invalid-feedback').text('');
         });
 
-        // Edit Product Modal initialization
-        $('#editProductModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var productId = button.data('product-id');
-            
-            // Fetch product data via AJAX
-            $.ajax({
-                url: "{% url 'product_edit' 0 %}".replace("0", productId),
-                type: 'GET',
-                success: function(response) {
-                    var form = $('#editProductForm');
-                    form.attr('action', "{% url 'product_edit' 0 %}".replace("0", productId));
-                    form.find('#productId').val(productId);
-                    form.find('#edit_name').val(response.name || "");
-                    form.find('#edit_category').val(response.category_id || "");
-                    form.find('#edit_description').val(response.description || "");
-                    form.find('#edit_MRP').val(response.MRP || "");
-                    form.find('#edit_sale_price').val(response.sale_price || "");
-                    form.find('#edit_url').val(response.url || "");
-                    form.find('#edit_status').prop('checked', response.status);
-                    
-                    // Display current images
-                    var currentImagesContainer = $('#currentImages');
-                    currentImagesContainer.empty();
-                    
-                    if (response.images && response.images.length > 0) {
-                        response.images.forEach(function(image) {
-                            var imageHtml = `
-                                <div class="current-image">
-                                    <img src="${image.url}" alt="Product Image">
-                                    <input type="checkbox" class="delete-checkbox" name="delete_images" value="${image.id}">
-                                    <small class="text-muted d-block">Delete</small>
-                                </div>
-                            `;
-                            currentImagesContainer.append(imageHtml);
-                        });
-                    } else {
-                        currentImagesContainer.html('<p class="text-muted">No images</p>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error fetching product data:', error);
-                    alert('Error loading product data');
-                }
-            });
-        });
 
         // Delete Product Modal
         $('#deleteProductModal').on('show.bs.modal', function(event) {
@@ -492,6 +489,322 @@
             if (!$(e.target).closest('.action-menu-container').length) {
                 $('.action-card').hide();
             }
+        });
+
+        // Variant Management Functions
+        let variantCounter = 0;
+        let editVariantCounter = 0;
+
+        // Sizes and Colors data
+        const sizesData = [
+            {% for size in sizes %}
+            {id: {{ size.id }}, name: "{{ size.name }}"}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        const colorsData = [
+            {% for color in colors %}
+            {id: {{ color.id }}, name: "{{ color.name }}"}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        // Function to create variant HTML for Add Modal
+        function createVariantHTML(sizeId = '', colorId = '', stockQty = '', sku = '', status = true, variantId = null) {
+            const variantIndex = variantId ? variantId : variantCounter++;
+            let sizeOptions = '<option value="">Select Size</option>';
+            let colorOptions = '<option value="">Select Color</option>';
+            
+            sizesData.forEach(size => {
+                sizeOptions += `<option value="${size.id}" ${sizeId == size.id ? 'selected' : ''}>${size.name}</option>`;
+            });
+            
+            colorsData.forEach(color => {
+                colorOptions += `<option value="${color.id}" ${colorId == color.id ? 'selected' : ''}>${color.name}</option>`;
+            });
+            
+            return `
+                <div class="variant-card" data-variant-index="${variantIndex}">
+                    <div class="variant-header">
+                        <h6>Variant ${variantIndex + 1}</h6>
+                        <button type="button" class="btn btn-sm btn-danger remove-variant">Remove</button>
+                    </div>
+                    <input type="hidden" class="variant-id" value="${variantId || ''}">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Size</label>
+                            <select class="form-control variant-size" name="variant_size_${variantIndex}">
+                                <option value="">Select Size</option>
+                                ${sizeOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Color</label>
+                            <select class="form-control variant-color" name="variant_color_${variantIndex}">
+                                <option value="">Select Color</option>
+                                ${colorOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">Stock Qty</label>
+                            <input type="number" class="form-control variant-stock" value="${stockQty}" min="0">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">SKU</label>
+                            <input type="text" class="form-control variant-sku" value="${sku}">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input variant-status" type="checkbox" ${status ? 'checked' : ''}>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">Variant Images</label>
+                            <input type="file" class="form-control variant-image-input" 
+                                   name="variant_images_${sizeId || variantIndex}_${colorId || variantIndex}_0" 
+                                   multiple accept="image/*">
+                            <small class="text-muted">Images specific to this variant</small>
+                            <div class="variant-images-preview" data-variant-index="${variantIndex}"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to create variant HTML for Edit Modal
+        function createEditVariantHTML(variantData, sizes, colors) {
+            const variantIndex = variantData.id || editVariantCounter++;
+            let sizeOptions = '<option value="">Select Size</option>';
+            let colorOptions = '<option value="">Select Color</option>';
+            
+            sizes.forEach(size => {
+                sizeOptions += `<option value="${size.id}" ${variantData.size_id == size.id ? 'selected' : ''}>${size.name}</option>`;
+            });
+            
+            colors.forEach(color => {
+                colorOptions += `<option value="${color.id}" ${variantData.color_id == color.id ? 'selected' : ''}>${color.name}</option>`;
+            });
+            
+            let existingImagesHTML = '';
+            if (variantData.images && variantData.images.length > 0) {
+                variantData.images.forEach(img => {
+                    existingImagesHTML += `
+                        <div class="current-image">
+                            <img src="${img.url}" alt="Variant Image">
+                            <input type="checkbox" class="delete-checkbox variant-delete-image" 
+                                   data-image-id="${img.id}" value="${img.id}">
+                            <small class="text-muted d-block">Delete</small>
+                        </div>
+                    `;
+                });
+            }
+            
+            return `
+                <div class="variant-card" data-variant-index="${variantIndex}">
+                    <div class="variant-header">
+                        <h6>Variant ${variantIndex}</h6>
+                        <button type="button" class="btn btn-sm btn-danger remove-edit-variant">Remove</button>
+                    </div>
+                    <input type="hidden" class="variant-id" value="${variantData.id || ''}">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Size</label>
+                            <select class="form-control variant-size" name="variant_size_${variantIndex}">
+                                ${sizeOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Color</label>
+                            <select class="form-control variant-color" name="variant_color_${variantIndex}">
+                                ${colorOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">Stock Qty</label>
+                            <input type="number" class="form-control variant-stock" value="${variantData.stock_quantity || 0}" min="0">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">SKU</label>
+                            <input type="text" class="form-control variant-sku" value="${variantData.sku || ''}">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input variant-status" type="checkbox" ${variantData.status ? 'checked' : ''}>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">Existing Variant Images</label>
+                            <div class="current-images">${existingImagesHTML || '<p class="text-muted">No images</p>'}</div>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">Add New Variant Images</label>
+                            <input type="file" class="form-control variant-image-input" 
+                                   name="variant_images_${variantData.size_id || variantIndex}_${variantData.color_id || variantIndex}_0" 
+                                   multiple accept="image/*">
+                            <div class="variant-images-preview" data-variant-index="${variantIndex}"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to update variants data
+        function updateVariantsData(containerId, hiddenInputId) {
+            const variants = [];
+            $(containerId + ' .variant-card').each(function() {
+                const $card = $(this);
+                const variantId = $card.find('.variant-id').val();
+                const sizeId = $card.find('.variant-size').val();
+                const colorId = $card.find('.variant-color').val();
+                const stockQty = $card.find('.variant-stock').val() || 0;
+                const sku = $card.find('.variant-sku').val();
+                const status = $card.find('.variant-status').is(':checked');
+                const deleteImages = [];
+                $card.find('.variant-delete-image:checked').each(function() {
+                    deleteImages.push($(this).val());
+                });
+                
+                variants.push({
+                    id: variantId || null,
+                    size_id: sizeId || null,
+                    color_id: colorId || null,
+                    stock_quantity: stockQty,
+                    sku: sku,
+                    status: status,
+                    delete_images: deleteImages,
+                    images: [0] // Placeholder for image indices
+                });
+            });
+            $(hiddenInputId).val(JSON.stringify(variants));
+        }
+
+        // Add variant button (Add Modal)
+        $('#addVariantBtn').on('click', function() {
+            const html = createVariantHTML();
+            $('#variantsContainer').append(html);
+            updateVariantsData('#variantsContainer', '#variants_data');
+        });
+
+        // Remove variant (Add Modal)
+        $(document).on('click', '.remove-variant', function() {
+            $(this).closest('.variant-card').remove();
+            updateVariantsData('#variantsContainer', '#variants_data');
+        });
+
+        // Add variant button (Edit Modal)
+        $('#addEditVariantBtn').on('click', function() {
+            const html = createEditVariantHTML({}, sizesData, colorsData);
+            $('#editVariantsContainer').append(html);
+            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+        });
+
+        // Remove variant (Edit Modal)
+        $(document).on('click', '.remove-edit-variant', function() {
+            $(this).closest('.variant-card').remove();
+            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+        });
+
+        // Update variants data on change
+        $(document).on('change', '.variant-size, .variant-color, .variant-stock, .variant-sku, .variant-status, .variant-delete-image', function() {
+            const $card = $(this).closest('.variant-card');
+            const sizeId = $card.find('.variant-size').val() || $card.data('variant-index');
+            const colorId = $card.find('.variant-color').val() || $card.data('variant-index');
+            const variantIndex = $card.data('variant-index');
+            
+            // Update file input name to match backend expectation
+            $card.find('.variant-image-input').attr('name', `variant_images_${sizeId}_${colorId}_0`);
+            
+            if ($(this).closest('#variantsContainer').length) {
+                updateVariantsData('#variantsContainer', '#variants_data');
+            } else if ($(this).closest('#editVariantsContainer').length) {
+                updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+            }
+        });
+
+        // Variant image preview
+        $(document).on('change', '.variant-image-input', function() {
+            const files = this.files;
+            const previewContainer = $(this).siblings('.variant-images-preview');
+            previewContainer.empty();
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.match('image.*')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = $('<div class="image-preview">');
+                        preview.html(`<img src="${e.target.result}" alt="Preview">`);
+                        previewContainer.append(preview);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Update Edit Modal to load variants
+        $('#editProductModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var productId = button.data('product-id');
+            
+            // Fetch product data via AJAX
+            $.ajax({
+                url: "{% url 'product_edit' 0 %}".replace("0", productId),
+                type: 'GET',
+                success: function(response) {
+                    var form = $('#editProductForm');
+                    form.attr('action', "{% url 'product_edit' 0 %}".replace("0", productId));
+                    form.find('#productId').val(productId);
+                    form.find('#edit_name').val(response.name || "");
+                    form.find('#edit_category').val(response.category_id || "");
+                    form.find('#edit_description').val(response.description || "");
+                    form.find('#edit_MRP').val(response.MRP || "");
+                    form.find('#edit_sale_price').val(response.sale_price || "");
+                    form.find('#edit_url').val(response.url || "");
+                    form.find('#edit_status').prop('checked', response.status);
+                    
+                    // Display current common images
+                    var currentImagesContainer = $('#currentImages');
+                    currentImagesContainer.empty();
+                    
+                    if (response.images && response.images.length > 0) {
+                        response.images.forEach(function(image) {
+                            var imageHtml = `
+                                <div class="current-image">
+                                    <img src="${image.url}" alt="Product Image">
+                                    <input type="checkbox" class="delete-checkbox" name="delete_images" value="${image.id}">
+                                    <small class="text-muted d-block">Delete</small>
+                                </div>
+                            `;
+                            currentImagesContainer.append(imageHtml);
+                        });
+                    } else {
+                        currentImagesContainer.html('<p class="text-muted">No images</p>');
+                    }
+                    
+                    // Load variants
+                    $('#editVariantsContainer').empty();
+                    if (response.variants && response.variants.length > 0) {
+                        response.variants.forEach(function(variant) {
+                            const html = createEditVariantHTML(variant, sizesData, colorsData);
+                            $('#editVariantsContainer').append(html);
+                        });
+                    }
+                    updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching product data:', error);
+                    alert('Error loading product data');
+                }
+            });
+        });
+
+        // Update variants data before form submission
+        $('#addProductForm').on('submit', function() {
+            updateVariantsData('#variantsContainer', '#variants_data');
+        });
+
+        $('#editProductForm').on('submit', function() {
+            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
         });
     });
 </script>

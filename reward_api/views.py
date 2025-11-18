@@ -16,7 +16,7 @@ from django.core.cache import cache
 # ========================================
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Prefetch
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.files.storage import default_storage
 from django.core.paginator import EmptyPage
@@ -89,18 +89,82 @@ def _build_absolute_media_url(request, path):
     return path
 
 
+def _serialize_image(img, request=None):
+    if not img or not img.image:
+        return None
+    url = _build_absolute_media_url(request, img.image.url)
+    if not url:
+        return None
+    return {
+        'id': img.id,
+        'url': url,
+        'is_primary': getattr(img, 'is_primary', False),
+        'variant_id': img.variant_id,
+    }
+
+
 def serialize_product_record(product_obj, request=None):
     if not product_obj:
         return None
 
-    image_urls = []
-    images = getattr(product_obj, 'images', None)
-    if images is not None:
-        for img in images.all():
-            if img.image:
-                url = _build_absolute_media_url(request, img.image.url)
-                if url:
-                    image_urls.append(url)
+    prefetched_images = getattr(product_obj, 'prefetched_images', None)
+    if prefetched_images is None:
+        prefetched_images = list(product_obj.images.all())
+
+    common_images = []
+    for img in prefetched_images:
+        if img.variant_id:
+            continue
+        serialized = _serialize_image(img, request)
+        if serialized:
+            common_images.append(serialized)
+
+    variants_data = []
+    available_sizes = {}
+    available_colors = {}
+
+    for variant in product_obj.variants.all():
+        variant_images = []
+        for img in variant.images.all():
+            serialized = _serialize_image(img, request)
+            if serialized:
+                variant_images.append(serialized)
+
+        size_payload = None
+        if variant.size:
+            size_payload = {'id': variant.size.id, 'name': variant.size.name}
+            available_sizes[variant.size.id] = size_payload
+
+        color_payload = None
+        if variant.color:
+            color_payload = {
+                'id': variant.color.id,
+                'name': variant.color.name,
+                'hex_code': variant.color.hex_code
+            }
+            available_colors[variant.color.id] = color_payload
+
+        variants_data.append({
+            'id': variant.id,
+            'size': size_payload,
+            'color': color_payload,
+            'stock_quantity': variant.stock_quantity,
+            'sku': variant.sku,
+            'status': variant.status,
+            'images': variant_images,
+        })
+
+    # Determine featured image
+    featured_image = None
+    for variant in variants_data:
+        primary = next((img for img in variant['images'] if img['is_primary']), None)
+        if primary:
+            featured_image = primary['url']
+            break
+        if variant['images'] and not featured_image:
+            featured_image = variant['images'][0]['url']
+    if not featured_image and common_images:
+        featured_image = common_images[0]['url']
 
     return {
         'id': product_obj.id,
@@ -114,8 +178,11 @@ def serialize_product_record(product_obj, request=None):
             'id': product_obj.category.id,
             'name': product_obj.category.name,
         } if product_obj.category else None,
-        'image_urls': image_urls,
-        'image_urls_csv': ','.join(image_urls) if image_urls else '',
+        'common_images': common_images,
+        'variants': variants_data,
+        'available_sizes': list(available_sizes.values()),
+        'available_colors': list(available_colors.values()),
+        'featured_image': featured_image,
         'created_at': product_obj.created_at.isoformat() if product_obj.created_at else None,
         'updated_at': product_obj.updated_at.isoformat() if product_obj.updated_at else None,
     }
@@ -238,8 +305,8 @@ class SendRegistrationOTP(APIView):
                 'status': 1,
                 'message': 'OTP sent successfully.',
                 'data': {
-                    # 'email': email,  
-                    # 'otp': otp_record.OTP  
+                    'email': email,  
+                    'otp': otp_record.OTP  
                 }
             }, status=status.HTTP_200_OK)
             
@@ -414,8 +481,6 @@ class LoginAPI(APIView):
                 or ''
             ).strip()
             password = request.data.get('password')
-            device_type = request.data.get('device_type')
-            device_token = request.data.get('device_token')
 
             if not identifier or not password:
                 return Response({
@@ -444,10 +509,6 @@ class LoginAPI(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             user.last_login = timezone.now()
-            if device_type is not None:
-                user.device_type = device_type
-            if device_token:
-                user.device_token = device_token
             user.save()
 
             refresh = RefreshToken.for_user(user)
@@ -1049,9 +1110,16 @@ class ProductCategoryWiseAPIView(APIView):
                     'message': 'Category not found.',
                 }, status=status.HTTP_404_NOT_FOUND)
 
+            images_prefetch = Prefetch('images', queryset=product_image.objects.all(), to_attr='prefetched_images')
+            variant_prefetch = Prefetch(
+                'variants',
+                queryset=product_variant.objects.select_related('size', 'color').prefetch_related('images')
+            )
+
             products = (
                 product.objects.filter(category=category, status=True)
-                .prefetch_related('images', 'category')
+                .select_related('category')
+                .prefetch_related(images_prefetch, variant_prefetch)
                 .order_by('-created_at')
             )
 
@@ -1092,7 +1160,18 @@ class ProductListWithImagesAPIView(APIView):
             if search:
                 products_qs = products_qs.filter(name__icontains=search)
 
-            products_qs = products_qs.prefetch_related('images', 'category').order_by('-created_at')
+            images_prefetch = Prefetch('images', queryset=product_image.objects.all(), to_attr='prefetched_images')
+            variant_prefetch = Prefetch(
+                'variants',
+                queryset=product_variant.objects.select_related('size', 'color').prefetch_related('images')
+            )
+
+            products_qs = (
+                products_qs
+                .select_related('category')
+                .prefetch_related(images_prefetch, variant_prefetch)
+                .order_by('-created_at')
+            )
 
             products_data = [serialize_product_record(prod, request) for prod in products_qs]
 
@@ -1116,8 +1195,14 @@ class ProductDetailAPIView(APIView):
 
     def get(self, request, pk, *args, **kwargs):
         try:
+            images_prefetch = Prefetch('images', queryset=product_image.objects.all(), to_attr='prefetched_images')
+            variant_prefetch = Prefetch(
+                'variants',
+                queryset=product_variant.objects.select_related('size', 'color').prefetch_related('images')
+            )
             product_obj = (
-                product.objects.prefetch_related('images', 'category')
+                product.objects.select_related('category')
+                .prefetch_related(images_prefetch, variant_prefetch)
                 .get(id=pk, status=True)
             )
             data = serialize_product_record(product_obj, request)
@@ -1145,6 +1230,12 @@ class AddToCartAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
+            user = request.user
+            if not user.is_authenticated:
+                return Response({
+                    'status': 0,
+                    'message': 'Authentication required to add items to cart.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
             product_id = request.data.get('product_id')
             if not product_id:
                 return Response({
@@ -1191,10 +1282,15 @@ class CartListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
+            images_prefetch = Prefetch('product__images', queryset=product_image.objects.all())
+            variant_prefetch = Prefetch(
+                'product__variants',
+                queryset=product_variant.objects.select_related('size', 'color').prefetch_related('images')
+            )
             cart_items = (
                 cart.objects.filter(customer=request.user)
                 .select_related('product__category')
-                .prefetch_related('product__images')
+                .prefetch_related(images_prefetch, variant_prefetch)
                 .order_by('-created_at')
             )
 
@@ -1287,10 +1383,15 @@ class WishlistListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
+            images_prefetch = Prefetch('product__images', queryset=product_image.objects.all())
+            variant_prefetch = Prefetch(
+                'product__variants',
+                queryset=product_variant.objects.select_related('size', 'color').prefetch_related('images')
+            )
             wishlist_items = (
                 wishlist.objects.filter(customer=request.user)
                 .select_related('product__category')
-                .prefetch_related('product__images')
+                .prefetch_related(images_prefetch, variant_prefetch)
                 .order_by('-created_at')
             )
 

@@ -50,6 +50,18 @@ urlpatterns = [
     path('faq/edit/<int:faq_id>/', FAQEditView.as_view(), name='faq_edit'),
     path('faq/delete/<int:faq_id>/', FAQDeleteView.as_view(), name='faq_delete'),
 
+    # -------- Size --------
+    path('sizes/', SizeListView.as_view(), name='size_list'),
+    path('sizes/create/', SizeCreateView.as_view(), name='size_create'),
+    path('sizes/edit/<int:pk>/', SizeEditView.as_view(), name='size_edit'),
+    path('sizes/delete/<int:pk>/', SizeDeleteView.as_view(), name='size_delete'),
+
+    # -------- Color --------
+    path('colors/', ColorListView.as_view(), name='color_list'),
+    path('colors/create/', ColorCreateView.as_view(), name='color_create'),
+    path('colors/edit/<int:pk>/', ColorEditView.as_view(), name='color_edit'),
+    path('colors/delete/<int:pk>/', ColorDeleteView.as_view(), name='color_delete'),
+
     # -------- Country/State/City --------
     path('countries/', CountryListView.as_view(), name='country_list'),
     path('countries/create/', CountryCreateView.as_view(), name='country_create'),

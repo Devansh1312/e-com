@@ -199,6 +199,33 @@ class product_category(models.Model):
         db_table = 'e_com_product_category'
 
 
+class Size(models.Model):
+    name = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'e_com_size'
+
+
+class Color(models.Model):
+    name = models.CharField(max_length=100, null=True, blank=True)
+    hex_code = models.CharField(max_length=7, null=True, blank=True, help_text='Color hex code (e.g., #FF0000)')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'e_com_color'
+
+
 class product(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
     category = models.ForeignKey(product_category, on_delete=models.CASCADE, related_name='products')
@@ -215,13 +242,40 @@ class product(models.Model):
     class Meta:
         db_table = 'e_com_product'
 
+
+class product_variant(models.Model):
+    product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='variants')
+    size = models.ForeignKey(Size, on_delete=models.CASCADE, null=True, blank=True, related_name='variants')
+    color = models.ForeignKey(Color, on_delete=models.CASCADE, null=True, blank=True, related_name='variants')
+    stock_quantity = models.IntegerField(default=0, null=True, blank=True)
+    sku = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text='Stock Keeping Unit')
+    status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    def __str__(self):
+        size_name = self.size.name if self.size else 'No Size'
+        color_name = self.color.name if self.color else 'No Color'
+        return f"{self.product.name} - {size_name} - {color_name}"
+
+    class Meta:
+        db_table = 'e_com_product_variant'
+        unique_together = ('product', 'size', 'color')
+
+
 class product_image(models.Model):
     product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='images')
+    variant = models.ForeignKey(product_variant, on_delete=models.CASCADE, null=True, blank=True, related_name='images', 
+                                 help_text='If set, image is specific to this variant. If null, image is common for all variants.')
     image = models.ImageField(upload_to="product_images/", null=True, blank=True)
+    is_primary = models.BooleanField(default=False, help_text='Primary image for the product/variant')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
     def __str__(self):
-        return self.product.name
+        if self.variant:
+            return f"{self.product.name} - {self.variant}"
+        return f"{self.product.name} - Common Image"
 
     class Meta:
         db_table = 'e_com_product_image'
