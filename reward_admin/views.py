@@ -12,6 +12,7 @@ from django.views import View
 from datetime import datetime
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.utils.decorators import method_decorator
 
 # =============================
 # Django Authentication & Auth
@@ -47,7 +48,23 @@ from calendar import month_name
 # ================================
 from reward_admin.models import *
 from reward_admin.forms import *
+from functools import wraps
 
+
+#Method to Check User is Authenticated or Not
+def login_required_with_role_check(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(f"{settings.LOGIN_URL}?next={request.path}")
+
+        if request.user.role_id != 1:  # Check role
+            messages.error(request, "You do not have access to this site.")
+            return redirect(settings.LOGIN_URL)
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
 
 # Utility function to generate a unique filename for uploaded images
 def generate_unique_filename(prefix, extension):
@@ -176,6 +193,7 @@ def authenticate_username_email_or_phone(login_input, password):
     return None
 
 ################################ Dashboard View ##########################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class Dashboard(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Check if user is authenticated
@@ -294,6 +312,7 @@ def logout_view(request):
     return redirect("adminlogin")
 
 ######################### SystemSettings view #######################################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class System_Settings(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         system_settings = SystemSettings.objects.first()
@@ -418,6 +437,7 @@ class System_Settings(LoginRequiredMixin, View):
         )
 
 ##################################################### User Change Password View ###############################################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 def change_password_ajax(request):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         form = CustomPasswordChangeForm(user=request.user, data=request.POST)
@@ -443,6 +463,7 @@ def change_password_ajax(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 ##################################################### User Profile View ###############################################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class UserProfileView(LoginRequiredMixin, View):
     def get(self, request):
         user = request.user
@@ -458,7 +479,7 @@ class UserProfileView(LoginRequiredMixin, View):
 
         return render(request, "Admin/User/User_Profile.html", {"user": user})
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class UserUpdateProfileView(View):
     def get(self, request, *args, **kwargs):
         countries = Country.objects.all()
@@ -718,6 +739,7 @@ def api_get_cities(request):
 ################################################################# Role CRUD Views ###################################################
 
 # User Role List Module  
+@method_decorator(login_required_with_role_check, name="dispatch")
 class RoleView(LoginRequiredMixin, View):
     template_name = "Admin/Permissions/User_Role.html"
 
@@ -752,6 +774,7 @@ class RoleView(LoginRequiredMixin, View):
 #         return redirect("role_list")
 
 # Role Edit Views
+@method_decorator(login_required_with_role_check, name="dispatch")
 class RoleEditView(LoginRequiredMixin, View):
     def post(self, request, role_id):
         role = get_object_or_404(Role, id=role_id)
@@ -777,6 +800,7 @@ class RoleEditView(LoginRequiredMixin, View):
 #         return redirect("role_list")
 
 #################################################### Country List View API ##################################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CountryListView(View):
     def get(self, request):
         countries = Country.objects.all().order_by('-created_at')
@@ -785,6 +809,7 @@ class CountryListView(View):
             'breadcrumb': {'child': 'Country Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CountryCreateView(View):
     def post(self, request):
         code = request.POST.get('code')
@@ -831,6 +856,7 @@ class CountryCreateView(View):
 
         return redirect('country_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CountryEditView(View):
     def get(self, request, pk):
         country = get_object_or_404(Country, pk=pk)
@@ -899,6 +925,7 @@ class CountryEditView(View):
         
         return redirect('country_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CountryDeleteView(View):
     def post(self, request, pk):
         country = get_object_or_404(Country, pk=pk)
@@ -918,6 +945,7 @@ class CountryDeleteView(View):
 
 
 #################################  State CRUD #######################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class StateListView(View):
     def get(self, request):
         states = State.objects.select_related('country').all()
@@ -928,6 +956,7 @@ class StateListView(View):
             'breadcrumb': {'child': 'State Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class StateCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -950,6 +979,7 @@ class StateCreateView(View):
         
         return redirect('state_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class StateEditView(View):
     def get(self, request, pk):
         state = get_object_or_404(State, pk=pk)
@@ -974,6 +1004,7 @@ class StateEditView(View):
         
         return redirect('state_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class StateDeleteView(View):
     def post(self, request, pk):
         state = get_object_or_404(State, pk=pk)
@@ -986,6 +1017,7 @@ class StateDeleteView(View):
         return redirect('state_list')
 
 ############################## City List View #################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CityListView(LoginRequiredMixin, View):
     template_name = "Admin/Location/City_List.html"
 
@@ -1133,6 +1165,7 @@ class CityListView(LoginRequiredMixin, View):
         
         return JsonResponse(response)
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CityCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -1155,6 +1188,7 @@ class CityCreateView(View):
         
         return redirect('city_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CityEditView(View):
     def get(self, request, pk):
         city = get_object_or_404(City, pk=pk)
@@ -1179,6 +1213,7 @@ class CityEditView(View):
         
         return redirect('city_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CityDeleteView(View):
     def post(self, request, pk):
         city = get_object_or_404(City, pk=pk)
@@ -1212,7 +1247,7 @@ def get_cities(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 ########################## Customer Views ###############################
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerUserListView(LoginRequiredMixin, View):
     template_name = "Admin/User/Customer_List.html"
 
@@ -1365,6 +1400,7 @@ class CustomerUserListView(LoginRequiredMixin, View):
 
 
 ######################################## Customer Detail Page #################################################        
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerDetailView(LoginRequiredMixin, View):
     template_name = "Admin/User/Customer_Detail.html"
 
@@ -1390,6 +1426,7 @@ class CustomerDetailView(LoginRequiredMixin, View):
 
 
 ############################## Customer Toggle Status View ###################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerToggleStatusView(LoginRequiredMixin, View):
     def post(self, request, pk):
         User = get_user_model()
@@ -1414,6 +1451,7 @@ class CustomerToggleStatusView(LoginRequiredMixin, View):
         
 
 ######################################### FAQ CRUD #########################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class FAQView(LoginRequiredMixin, View):
     template_name = "Admin/General_Settings/Faq.html"
 
@@ -1429,6 +1467,7 @@ class FAQView(LoginRequiredMixin, View):
         )
 
 # FAQ Create Views
+@method_decorator(login_required_with_role_check, name="dispatch")
 class FAQCreateView(LoginRequiredMixin, View):
     def post(self, request):
         question = request.POST.get("question")
@@ -1447,6 +1486,7 @@ class FAQCreateView(LoginRequiredMixin, View):
         return redirect("faq_list")
 
 # FAQ Edit Views 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class FAQEditView(LoginRequiredMixin, View):
     template_name = "Admin/MobileApp/Faq.html"
 
@@ -1468,6 +1508,7 @@ class FAQEditView(LoginRequiredMixin, View):
         return redirect("faq_list")
 
 # FAQ Delete Views 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class FAQDeleteView(LoginRequiredMixin, View):
     def post(self, request, faq_id):
         faq = get_object_or_404(FAQ, id=faq_id)
@@ -1477,6 +1518,7 @@ class FAQDeleteView(LoginRequiredMixin, View):
 
 
 ############################## Size CRUD #####################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class SizeListView(LoginRequiredMixin, View):
     template_name = "Admin/General_Settings/Size.html"
 
@@ -1491,7 +1533,7 @@ class SizeListView(LoginRequiredMixin, View):
             },
         )
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class SizeCreateView(LoginRequiredMixin, View):
     def post(self, request):
         name = (request.POST.get("name") or "").strip()
@@ -1509,7 +1551,7 @@ class SizeCreateView(LoginRequiredMixin, View):
         messages.success(request, "Size created successfully.")
         return redirect("size_list")
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class SizeEditView(LoginRequiredMixin, View):
     def post(self, request, pk):
         size = get_object_or_404(Size, pk=pk)
@@ -1530,7 +1572,7 @@ class SizeEditView(LoginRequiredMixin, View):
         messages.success(request, "Size updated successfully.")
         return redirect("size_list")
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class SizeDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         size = get_object_or_404(Size, pk=pk)
@@ -1540,6 +1582,7 @@ class SizeDeleteView(LoginRequiredMixin, View):
 
 
 ############################## Color CRUD ####################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ColorListView(LoginRequiredMixin, View):
     template_name = "Admin/General_Settings/Color.html"
 
@@ -1554,7 +1597,7 @@ class ColorListView(LoginRequiredMixin, View):
             },
         )
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ColorCreateView(LoginRequiredMixin, View):
     def post(self, request):
         name = (request.POST.get("name") or "").strip()
@@ -1580,7 +1623,7 @@ class ColorCreateView(LoginRequiredMixin, View):
         messages.success(request, "Color created successfully.")
         return redirect("color_list")
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ColorEditView(LoginRequiredMixin, View):
     def post(self, request, pk):
         color = get_object_or_404(Color, pk=pk)
@@ -1610,7 +1653,7 @@ class ColorEditView(LoginRequiredMixin, View):
         messages.success(request, "Color updated successfully.")
         return redirect("color_list")
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ColorDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         color = get_object_or_404(Color, pk=pk)
@@ -1620,6 +1663,7 @@ class ColorDeleteView(LoginRequiredMixin, View):
 
 
 ################### Product Category CRUD #########################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductCategoryListView(View):
     def get(self, request):
         categories = product_category.objects.all().order_by('-created_at')
@@ -1628,6 +1672,7 @@ class ProductCategoryListView(View):
             'breadcrumb': {'child': 'Product Category Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductCategoryCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -1680,6 +1725,7 @@ class ProductCategoryCreateView(View):
 
         return redirect('product_category_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductCategoryEditView(View):
     def get(self, request, pk):
         category = get_object_or_404(product_category, pk=pk)
@@ -1757,6 +1803,7 @@ class ProductCategoryEditView(View):
         
         return redirect('product_category_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductCategoryDeleteView(View):
     def post(self, request, pk):
         category = get_object_or_404(product_category, pk=pk)
@@ -1778,7 +1825,7 @@ class ProductCategoryDeleteView(View):
 
 
 
-
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductListView(View):
     def get(self, request):
         products = product.objects.all().select_related('category').prefetch_related('images', 'variants').order_by('-created_at')
@@ -1793,6 +1840,7 @@ class ProductListView(View):
             'breadcrumb': {'child': 'Product Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
@@ -1930,6 +1978,7 @@ class ProductCreateView(View):
 
         return redirect('product_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductEditView(View):
     def get(self, request, pk):
         product_obj = get_object_or_404(product, pk=pk)
@@ -2173,6 +2222,7 @@ class ProductEditView(View):
         
         return redirect('product_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ProductDeleteView(View):
     def post(self, request, pk):
         product_obj = get_object_or_404(product, pk=pk)
@@ -2192,6 +2242,7 @@ class ProductDeleteView(View):
         
         return redirect('product_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerReviewListView(View):
     def get(self, request):
         reviews = customer_review.objects.all().select_related('product', 'customer').order_by('-created_at')
@@ -2200,6 +2251,7 @@ class CustomerReviewListView(View):
             'breadcrumb': {'child': 'Customer Reviews Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerReviewDetailView(View):
     def get(self, request, pk):
         review = get_object_or_404(customer_review, pk=pk)
@@ -2214,6 +2266,7 @@ class CustomerReviewDetailView(View):
             'updated_at': review.updated_at.strftime('%Y-%m-%d %H:%M') if review.updated_at else None
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerReviewEditView(View):
     def get(self, request, pk):
         review = get_object_or_404(customer_review, pk=pk)
@@ -2253,6 +2306,7 @@ class CustomerReviewEditView(View):
         
         return redirect('customer_review_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class CustomerReviewDeleteView(View):
     def post(self, request, pk):
         review = get_object_or_404(customer_review, pk=pk)
@@ -2264,6 +2318,7 @@ class CustomerReviewDeleteView(View):
         
         return redirect('customer_review_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ContactUsListView(View):
     def get(self, request):
         contacts = contact_us.objects.all().order_by('-created_at')
@@ -2272,6 +2327,7 @@ class ContactUsListView(View):
             'breadcrumb': {'child': 'Contact Us Messages'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ContactUsDetailView(View):
     def get(self, request, pk):
         contact_msg = get_object_or_404(contact_us, pk=pk)
@@ -2285,6 +2341,7 @@ class ContactUsDetailView(View):
             'updated_at': contact_msg.updated_at.strftime('%Y-%m-%d %H:%M') if contact_msg.updated_at else None
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ContactUsEditView(View):
     def get(self, request, pk):
         contact_msg = get_object_or_404(contact_us, pk=pk)
@@ -2325,6 +2382,7 @@ class ContactUsEditView(View):
         
         return redirect('contact_us_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class ContactUsDeleteView(View):
     def post(self, request, pk):
         contact_msg = get_object_or_404(contact_us, pk=pk)
@@ -2339,6 +2397,7 @@ class ContactUsDeleteView(View):
 
 
 ################### Dashboard Banner CRUD #########################################
+@method_decorator(login_required_with_role_check, name="dispatch")
 class DashboardBannerListView(View):
     def get(self, request):
         banners = dashboard_banner.objects.all().order_by('-created_at')
@@ -2347,6 +2406,7 @@ class DashboardBannerListView(View):
             'breadcrumb': {'child': 'Dashboard Banner Management'}
         })
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class DashboardBannerCreateView(View):
     def post(self, request):
         title = request.POST.get('title')
@@ -2391,6 +2451,7 @@ class DashboardBannerCreateView(View):
 
         return redirect('dashboard_banner_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class DashboardBannerEditView(View):
     def get(self, request, pk):
         banner = get_object_or_404(dashboard_banner, pk=pk)
@@ -2460,6 +2521,7 @@ class DashboardBannerEditView(View):
         
         return redirect('dashboard_banner_list')
 
+@method_decorator(login_required_with_role_check, name="dispatch")
 class DashboardBannerDeleteView(View):
     def post(self, request, pk):
         banner = get_object_or_404(dashboard_banner, pk=pk)
