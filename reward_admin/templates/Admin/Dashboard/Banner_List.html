@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% load sass_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Dashboard Banner Management{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-6">
+                    <h3>{{breadcrumb.child}}</h3>
+                </div>
+                <div class="col-6">
+                    <ol class="breadcrumb">
+                        <button class="btn btn-pill btn-outline-primary-2x ml-auto" data-bs-toggle="modal" data-bs-target="#addBannerModal">Add Banner</button>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="basic-1">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Image</th>
+                                        <th>Title</th>
+                                        <th>Created At</th>
+                                        <th>Updated At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for banner in banners %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            {% if banner.image %}
+                                                <img src="{{ banner.image.url }}" alt="{{ banner.title }}" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                            {% else %}
+                                                <span class="text-muted small">No Image</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.title|truncatewords:10 }}</td>
+                                        <td>{{ banner.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ banner.updated_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <div class="action-menu-container" style="position: relative; display: inline-block;">
+                                                <a href="#" class="three-dots-menu">
+                                                    <i data-feather="more-vertical"></i>
+                                                </a>
+                                                <div class="action-card" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); z-index: 10; width: auto;">
+                                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                                        <li style="padding: 8px 12px;">
+                                                            <a style="font-size: small" href="#" data-bs-toggle="modal" data-bs-target="#editBannerModal" 
+                                                            data-banner-id="{{ banner.id }}" 
+                                                            data-banner-title="{{ banner.title }}"
+                                                            data-banner-image-url="{% if banner.image %}{{ banner.image.url }}{% endif %}"> Edit </a>
+                                                        </li>
+                                                        <li style="padding: 8px 12px; border-top: 1px solid #eee;">
+                                                            <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteBannerModal" data-banner-id="{{ banner.id }}">
+                                                            Delete </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Banner Modal -->
+        <div class="modal fade" id="addBannerModal" tabindex="-1" aria-labelledby="addBannerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addBannerModalLabel">Add Dashboard Banner</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'dashboard_banner_create' %}" id="addBannerForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="title" class="form-label">Banner Title*</label>
+                                    <textarea class="form-control" id="title" name="title" placeholder="Enter banner title" rows="3"></textarea>
+                                    <div class="invalid-feedback" id="title-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="image" class="form-label">Banner Image</label>
+                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                    <small class="text-muted">Recommended aspect ratio for banners. Max 5MB.</small>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Add Banner</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Banner Modal -->
+        <div class="modal fade" id="editBannerModal" tabindex="-1" aria-labelledby="editBannerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editBannerModalLabel">Edit Dashboard Banner</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" id="editBannerForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" id="bannerId" name="id">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="edit_title" class="form-label">Banner Title*</label>
+                                    <textarea class="form-control" id="edit_title" name="title" rows="3"></textarea>
+                                    <div class="invalid-feedback" id="edit_title-error"></div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Current Image</label>
+                                    <div class="mb-2">
+                                        <img id="edit_banner_image_preview" src="" alt="Banner Image" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; display: none;">
+                                        <span id="edit_no_image_text" class="text-muted small">No Image</span>
+                                    </div>
+                                    <label for="edit_image" class="form-label">Change Image</label>
+                                    <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
+                                        <label class="form-check-label" for="remove_image">Remove existing image</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">Update Banner</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Banner Modal -->
+        <div class="modal fade" id="deleteBannerModal" tabindex="-1" aria-labelledby="deleteBannerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteBannerModalLabel">Delete Dashboard Banner</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="deleteBannerForm">
+                            {% csrf_token %}
+                            <input type="hidden" id="banner_id" name="id">
+                            <p>Are you sure you want to delete this dashboard banner? This action cannot be undone.</p>
+                            <button type="submit" class="btn btn-danger">Delete Banner</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
+<script>
+    $(document).ready(function() {
+        // Function to validate form fields
+        function validateForm(form) {
+            let isValid = true;
+            
+            // Validate Title
+            const titleInput = form.find('textarea[name="title"]');
+            const titleError = form.find('.invalid-feedback').first();
+            if (!titleInput.val() || titleInput.val().trim() === '') {
+                titleInput.addClass('is-invalid');
+                titleError.text('Banner title is required.');
+                isValid = false;
+            } else {
+                titleInput.removeClass('is-invalid');
+                titleError.text('');
+            }
+            
+            return isValid;
+        }
+
+        // Add Banner Form Validation
+        $('#addBannerForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Edit Banner Form Validation
+        $('#editBannerForm').on('submit', function(event) {
+            event.preventDefault();
+            if (validateForm($(this))) {
+                this.submit();
+            }
+        });
+
+        // Clear validation errors when modal is closed
+        $('.modal').on('hidden.bs.modal', function() {
+            $(this).find('.is-invalid').removeClass('is-invalid');
+            $(this).find('.invalid-feedback').text('');
+            $(this).find('form')[0].reset();
+        });
+
+        // Clear validation when user starts typing
+        $('textarea[name="title"]').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $(this).closest('.mb-3').find('.invalid-feedback').text('');
+        });
+
+        // Edit Banner Modal initialization
+        $('#editBannerModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var bannerId = button.data('banner-id');
+            var title = button.data('banner-title');
+            var imageUrl = button.data('banner-image-url');
+            
+            var form = $('#editBannerForm');
+            form.attr('action', "{% url 'dashboard_banner_edit' 0 %}".replace("0", bannerId));
+            form.find('#bannerId').val(bannerId);
+            form.find('#edit_title').val(title || "");
+            
+            // Set image preview
+            var imgEl = $('#edit_banner_image_preview');
+            var noImgEl = $('#edit_no_image_text');
+            $('#remove_image').prop('checked', false);
+            if (imageUrl) {
+                imgEl.attr('src', imageUrl).show();
+                noImgEl.hide();
+            } else {
+                imgEl.hide();
+                noImgEl.show();
+            }
+        });
+
+        // Delete Banner Modal
+        $('#deleteBannerModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var bannerId = button.data('banner-id');
+            $('#deleteBannerForm').attr('action', "{% url 'dashboard_banner_delete' 0 %}".replace('0', bannerId));
+        });
+
+        // Toggle action menu
+        $(document).on('click', '.three-dots-menu', function(e) {
+            e.preventDefault();
+            var actionCard = $(this).next('.action-card');
+            $('.action-card').not(actionCard).hide();
+            actionCard.toggle();
+        });
+
+        // Hide action card if clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.action-menu-container').length) {
+                $('.action-card').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}

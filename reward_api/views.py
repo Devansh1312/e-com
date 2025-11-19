@@ -166,6 +166,7 @@ def serialize_product_record(product_obj, request=None):
         'sale_price_in_dollar': str(product_obj.sale_price_in_dollar) if product_obj.sale_price_in_dollar is not None else None,
         'status': product_obj.status,
         'url': product_obj.url,
+        'youtube_url': product_obj.youtube_url,
         'category': {
             'id': product_obj.category.id,
             'name': product_obj.category.name,

@@ -1803,6 +1803,7 @@ class ProductCreateView(View):
         price_in_dolor = request.POST.get('price_in_dolor')
         sale_price_in_dollar = request.POST.get('sale_price_in_dollar')
         url = request.POST.get('url')
+        youtube_url = request.POST.get('youtube_url')
         status = 'status' in request.POST
         image_files = request.FILES.getlist('images')
         
@@ -1834,6 +1835,7 @@ class ProductCreateView(View):
                     price_in_dolor=price_in_dolor if price_in_dolor else None,
                     sale_price_in_dollar=sale_price_in_dollar if sale_price_in_dollar else None,
                     url=url,
+                    youtube_url=youtube_url if youtube_url else None,
                     status=status
                 )
 
@@ -1961,12 +1963,14 @@ class ProductEditView(View):
             'id': product_obj.id,
             'name': product_obj.name,
             'category_id': product_obj.category.id,
+            'category_name': product_obj.category.name if product_obj.category else None,
             'description': product_obj.description,
             'MRP': str(product_obj.MRP) if product_obj.MRP else '',
             'sale_price': str(product_obj.sale_price) if product_obj.sale_price else '',
             'price_in_dolor': str(product_obj.price_in_dolor) if product_obj.price_in_dolor else '',
             'sale_price_in_dollar': str(product_obj.sale_price_in_dollar) if product_obj.sale_price_in_dollar else '',
             'url': product_obj.url,
+            'youtube_url': product_obj.youtube_url,
             'status': product_obj.status,
             'images': [
                 {
@@ -1989,6 +1993,7 @@ class ProductEditView(View):
         price_in_dolor = request.POST.get('price_in_dolor')
         sale_price_in_dollar = request.POST.get('sale_price_in_dollar')
         url = request.POST.get('url')
+        youtube_url = request.POST.get('youtube_url')
         status = 'status' in request.POST
         new_images = request.FILES.getlist('new_images')
         delete_images = request.POST.getlist('delete_images')
@@ -2020,6 +2025,7 @@ class ProductEditView(View):
                 product_obj.price_in_dolor = price_in_dolor if price_in_dolor else None
                 product_obj.sale_price_in_dollar = sale_price_in_dollar if sale_price_in_dollar else None
                 product_obj.url = url
+                product_obj.youtube_url = youtube_url if youtube_url else None
                 product_obj.status = status
                 product_obj.save()
 
@@ -2330,3 +2336,145 @@ class ContactUsDeleteView(View):
         
         return redirect('contact_us_list')
 
+
+
+################### Dashboard Banner CRUD #########################################
+class DashboardBannerListView(View):
+    def get(self, request):
+        banners = dashboard_banner.objects.all().order_by('-created_at')
+        return render(request, 'Admin/Dashboard/Banner_List.html', {
+            'banners': banners,
+            'breadcrumb': {'child': 'Dashboard Banner Management'}
+        })
+
+class DashboardBannerCreateView(View):
+    def post(self, request):
+        title = request.POST.get('title')
+        image_file = request.FILES.get('image')
+
+        # Validation
+        if not title:
+            messages.error(request, "Banner title is required")
+            return redirect('dashboard_banner_list')
+
+        try:
+            banner = dashboard_banner.objects.create(title=title)
+
+            # Handle optional banner image
+            if image_file:
+                # Basic validation
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if image_file.content_type not in allowed_types:
+                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
+                    return redirect('dashboard_banner_list')
+
+                if image_file.size > 5 * 1024 * 1024:  # 5MB
+                    messages.error(request, "Image too large. Maximum size is 5MB.")
+                    return redirect('dashboard_banner_list')
+
+                # Generate unique filename
+                ext = os.path.splitext(image_file.name)[1].lstrip(".")
+                unique_filename = generate_unique_filename(f"banner_{banner.id}", ext)
+                file_path = os.path.join("dashboard_banner", unique_filename)
+
+                # Save file
+                default_storage.save(file_path, image_file)
+
+                # Attach to banner and save
+                banner.image = file_path
+                banner.save()
+
+            messages.success(request, "Dashboard banner created successfully")
+
+        except Exception as e:
+            messages.error(request, f"Error creating banner: {str(e)}")
+
+        return redirect('dashboard_banner_list')
+
+class DashboardBannerEditView(View):
+    def get(self, request, pk):
+        banner = get_object_or_404(dashboard_banner, pk=pk)
+        return JsonResponse({
+            'id': banner.id,
+            'title': banner.title,
+            'image_url': banner.image.url if banner.image else None,
+            'created_at': banner.created_at.strftime('%Y-%m-%d %H:%M') if banner.created_at else None,
+            'updated_at': banner.updated_at.strftime('%Y-%m-%d %H:%M') if banner.updated_at else None
+        })
+    
+    def post(self, request, pk):
+        banner = get_object_or_404(dashboard_banner, pk=pk)
+
+        title = request.POST.get('title')
+        image_file = request.FILES.get('image')
+        remove_image = request.POST.get('remove_image') == 'on'
+
+        # Validation
+        if not title:
+            messages.error(request, "Banner title is required")
+            return redirect('dashboard_banner_list')
+
+        try:
+            banner.title = title
+
+            # Handle image removal
+            if remove_image and banner.image:
+                # Delete existing file from storage
+                try:
+                    if default_storage.exists(banner.image.name):
+                        default_storage.delete(banner.image.name)
+                except Exception:
+                    pass
+                banner.image = None
+
+            # Handle new image upload (replace existing)
+            if image_file:
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if image_file.content_type not in allowed_types:
+                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
+                    return redirect('dashboard_banner_list')
+
+                if image_file.size > 5 * 1024 * 1024:
+                    messages.error(request, "Image too large. Maximum size is 5MB.")
+                    return redirect('dashboard_banner_list')
+
+                # Delete old file if exists
+                if banner.image:
+                    try:
+                        if default_storage.exists(banner.image.name):
+                            default_storage.delete(banner.image.name)
+                    except Exception:
+                        pass
+
+                # Save new file
+                ext = os.path.splitext(image_file.name)[1].lstrip(".")
+                unique_filename = generate_unique_filename(f"banner_{banner.id}", ext)
+                file_path = os.path.join("dashboard_banner", unique_filename)
+                default_storage.save(file_path, image_file)
+                banner.image = file_path
+
+            banner.save()
+            messages.success(request, "Dashboard banner updated successfully")
+        except Exception as e:
+            messages.error(request, f"Error updating banner: {str(e)}")
+        
+        return redirect('dashboard_banner_list')
+
+class DashboardBannerDeleteView(View):
+    def post(self, request, pk):
+        banner = get_object_or_404(dashboard_banner, pk=pk)
+        try:
+            # Delete associated image file if exists
+            if banner.image:
+                try:
+                    if default_storage.exists(banner.image.name):
+                        default_storage.delete(banner.image.name)
+                except Exception:
+                    pass
+
+            banner.delete()
+            messages.success(request, "Dashboard banner deleted successfully")
+        except Exception as e:
+            messages.error(request, f"Error deleting banner: {str(e)}")
+        
+        return redirect('dashboard_banner_list')

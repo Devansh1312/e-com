@@ -243,6 +243,7 @@ class product(models.Model):
     sale_price_in_dollar = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
     url = models.URLField(null=True, blank=True)
+    youtube_url = models.URLField(null=True, blank=True, help_text='YouTube video URL for this product')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
     def __str__(self):
@@ -339,3 +340,15 @@ class cart(models.Model):
     class Meta:
         db_table = 'e_com_cart'
         unique_together = ('customer', 'product')
+
+
+class dashboard_banner(models.Model):
+    image = models.ImageField(upload_to="dashboard_banner/", null=True, blank=True)
+    title = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)  
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        db_table = 'e_com_dashboard_banner'

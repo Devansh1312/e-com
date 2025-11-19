@@ -100,6 +100,11 @@ urlpatterns = [
     path('contact-us/edit/<int:pk>/', ContactUsEditView.as_view(), name='contact_us_edit'),
     path('contact-us/delete/<int:pk>/', ContactUsDeleteView.as_view(), name='contact_us_delete'),
 
+    # Dashboard Banner URLs
+    path('dashboard-banners/', DashboardBannerListView.as_view(), name='dashboard_banner_list'),
+    path('dashboard-banners/create/', DashboardBannerCreateView.as_view(), name='dashboard_banner_create'),
+    path('dashboard-banners/edit/<int:pk>/', DashboardBannerEditView.as_view(), name='dashboard_banner_edit'),
+    path('dashboard-banners/delete/<int:pk>/', DashboardBannerDeleteView.as_view(), name='dashboard_banner_delete'),
 ]
 
 # ================================
