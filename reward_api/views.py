@@ -92,6 +92,19 @@ def _serialize_image(img, request=None):
         'variant_id': img.variant_id,
     }
 
+def serialize_dashboard_banner(banner_obj, request=None):
+    if not banner_obj:
+        return None
+
+    image_url = _build_absolute_media_url(request, banner_obj.image.url) if banner_obj.image else None
+
+    return {
+        'id': banner_obj.id,
+        'title': banner_obj.title,
+        'image': image_url,
+        'created_at': banner_obj.created_at.isoformat() if banner_obj.created_at else None,
+        'updated_at': banner_obj.updated_at.isoformat() if banner_obj.updated_at else None,
+    }
 
 def serialize_product_record(product_obj, request=None):
     if not product_obj:
@@ -765,6 +778,8 @@ class DashboardAPI(APIView):
             user = request.user if request.user.is_authenticated else None
 
             categories_qs = product_category.objects.filter(status=True).order_by('name')
+            #fetch all dashboard banners with out filters
+            banner = dashboard_banner.objects.all()
             latest_products_qs = (
                 product.objects.filter(status=True)
                 .prefetch_related('images', 'category')
@@ -791,6 +806,7 @@ class DashboardAPI(APIView):
             response_data = {
                 'categories': categories_data,
                 'latest_products': latest_products_data,
+                'banners': [serialize_dashboard_banner(b, request) for b in banner]
             }
 
             if user:
