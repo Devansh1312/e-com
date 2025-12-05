@@ -748,7 +748,7 @@
         ];
 
         // Function to create variant HTML for Add Modal
-        function createVariantHTML(sizeId = '', colorId = '', stockQty = '', sku = '', status = true, variantId = null) {
+        function createVariantHTML(sizeId = '', colorId = '', mrp = '', salePrice = '', priceInDolor = '', salePriceInDollar = '', status = true, variantId = null) {
             const variantIndex = variantId ? variantId : variantCounter++;
             let sizeOptions = '<option value="">Select Size</option>';
             let colorOptions = '<option value="">Select Color</option>';
@@ -769,33 +769,41 @@
                     </div>
                     <input type="hidden" class="variant-id" value="${variantId || ''}">
                     <div class="row">
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Size</label>
                             <select class="form-control variant-size" name="variant_size_${variantIndex}">
                                 <option value="">Select Size</option>
                                 ${sizeOptions}
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Color</label>
                             <select class="form-control variant-color" name="variant_color_${variantIndex}">
                                 <option value="">Select Color</option>
                                 ${colorOptions}
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label">Stock Qty</label>
-                            <input type="number" class="form-control variant-stock" value="${stockQty}" min="0">
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label">SKU</label>
-                            <input type="text" class="form-control variant-sku" value="${sku}">
-                        </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Status</label>
                             <div class="form-check form-switch">
                                 <input class="form-check-input variant-status" type="checkbox" ${status ? 'checked' : ''}>
                             </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">MRP (₹)</label>
+                            <input type="number" class="form-control variant-mrp" value="${mrp}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Sale Price (₹)</label>
+                            <input type="number" class="form-control variant-sale-price" value="${salePrice}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Price (USD)</label>
+                            <input type="number" class="form-control variant-price-dolor" value="${priceInDolor}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Sale Price (USD)</label>
+                            <input type="number" class="form-control variant-sale-price-dollar" value="${salePriceInDollar}" step="0.01" min="0" placeholder="0.00">
                         </div>
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Variant Images</label>
@@ -846,31 +854,39 @@
                     </div>
                     <input type="hidden" class="variant-id" value="${variantData.id || ''}">
                     <div class="row">
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Size</label>
                             <select class="form-control variant-size" name="variant_size_${variantIndex}">
                                 ${sizeOptions}
                             </select>
                         </div>
-                        <div class="col-md-3 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Color</label>
                             <select class="form-control variant-color" name="variant_color_${variantIndex}">
                                 ${colorOptions}
                             </select>
                         </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label">Stock Qty</label>
-                            <input type="number" class="form-control variant-stock" value="${variantData.stock_quantity || 0}" min="0">
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label">SKU</label>
-                            <input type="text" class="form-control variant-sku" value="${variantData.sku || ''}">
-                        </div>
-                        <div class="col-md-2 mb-2">
+                        <div class="col-md-4 mb-2">
                             <label class="form-label">Status</label>
                             <div class="form-check form-switch">
                                 <input class="form-check-input variant-status" type="checkbox" ${variantData.status ? 'checked' : ''}>
                             </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">MRP (₹)</label>
+                            <input type="number" class="form-control variant-mrp" value="${variantData.MRP || ''}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Sale Price (₹)</label>
+                            <input type="number" class="form-control variant-sale-price" value="${variantData.sale_price || ''}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Price (USD)</label>
+                            <input type="number" class="form-control variant-price-dolor" value="${variantData.price_in_dolor || ''}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Sale Price (USD)</label>
+                            <input type="number" class="form-control variant-sale-price-dollar" value="${variantData.sale_price_in_dollar || ''}" step="0.01" min="0" placeholder="0.00">
                         </div>
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Existing Variant Images</label>
@@ -896,8 +912,10 @@
                 const variantId = $card.find('.variant-id').val();
                 const sizeId = $card.find('.variant-size').val();
                 const colorId = $card.find('.variant-color').val();
-                const stockQty = $card.find('.variant-stock').val() || 0;
-                const sku = $card.find('.variant-sku').val();
+                const mrp = $card.find('.variant-mrp').val();
+                const salePrice = $card.find('.variant-sale-price').val();
+                const priceInDolor = $card.find('.variant-price-dolor').val();
+                const salePriceInDollar = $card.find('.variant-sale-price-dollar').val();
                 const status = $card.find('.variant-status').is(':checked');
                 const deleteImages = [];
                 $card.find('.variant-delete-image:checked').each(function() {
@@ -908,8 +926,10 @@
                     id: variantId || null,
                     size_id: sizeId || null,
                     color_id: colorId || null,
-                    stock_quantity: stockQty,
-                    sku: sku,
+                    MRP: mrp || null,
+                    sale_price: salePrice || null,
+                    price_in_dolor: priceInDolor || null,
+                    sale_price_in_dollar: salePriceInDollar || null,
                     status: status,
                     delete_images: deleteImages,
                     images: [0] // Placeholder for image indices
@@ -945,7 +965,7 @@
         });
 
         // Update variants data on change
-        $(document).on('change', '.variant-size, .variant-color, .variant-stock, .variant-sku, .variant-status, .variant-delete-image', function() {
+        $(document).on('change', '.variant-size, .variant-color, .variant-mrp, .variant-sale-price, .variant-price-dolor, .variant-sale-price-dollar, .variant-status, .variant-delete-image', function() {
             const $card = $(this).closest('.variant-card');
             const sizeId = $card.find('.variant-size').val() || $card.data('variant-index');
             const colorId = $card.find('.variant-color').val() || $card.data('variant-index');
@@ -1136,14 +1156,16 @@
                     `;
                     
                     if (response.variants && response.variants.length > 0) {
-                        html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>Stock Qty</th><th>SKU</th><th>Status</th><th>Images</th></tr></thead><tbody>';
+                        html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>MRP (₹)</th><th>Sale Price (₹)</th><th>Price (USD)</th><th>Sale Price (USD)</th><th>Status</th><th>Images</th></tr></thead><tbody>';
                         response.variants.forEach(function(variant) {
                             html += `
                                 <tr>
                                     <td>${variant.size_name || 'N/A'}</td>
                                     <td>${variant.color_name || 'N/A'}</td>
-                                    <td>${variant.stock_quantity || 0}</td>
-                                    <td>${variant.sku || 'N/A'}</td>
+                                    <td>₹${variant.MRP || '-'}</td>
+                                    <td>₹${variant.sale_price || '-'}</td>
+                                    <td>$${variant.price_in_dolor || '-'}</td>
+                                    <td>$${variant.sale_price_in_dollar || '-'}</td>
                                     <td><span class="badge badge-${variant.status ? 'success' : 'danger'}">${variant.status ? 'Active' : 'Inactive'}</span></td>
                                     <td>${variant.images ? variant.images.length : 0} image(s)</td>
                                 </tr>

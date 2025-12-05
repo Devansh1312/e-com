@@ -162,8 +162,10 @@ def serialize_product_record(product_obj, request=None, user=None):
             'id': variant.id,
             'size': size_payload,
             'color': color_payload,
-            'stock_quantity': variant.stock_quantity,
-            'sku': variant.sku,
+            'mrp': str(variant.MRP) if variant.MRP is not None else None,
+            'sale_price': str(variant.sale_price) if variant.sale_price is not None else None,
+            'price_in_dolor': str(variant.price_in_dolor) if variant.price_in_dolor is not None else None,
+            'sale_price_in_dollar': str(variant.sale_price_in_dollar) if variant.sale_price_in_dollar is not None else None,
             'status': variant.status,
             'images': variant_images,
         })

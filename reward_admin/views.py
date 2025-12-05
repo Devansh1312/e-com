@@ -1979,10 +1979,14 @@ class ProductCreateView(View):
                 for variant_data in variants_json:
                     size_id = variant_data.get('size_id')
                     color_id = variant_data.get('color_id')
-                    stock_quantity = variant_data.get('stock_quantity', 0)
-                    sku = variant_data.get('sku', '')
                     variant_status = variant_data.get('status', True)
                     variant_images = variant_data.get('images', [])
+                    
+                    # Variant price fields
+                    variant_MRP = variant_data.get('MRP')
+                    variant_sale_price = variant_data.get('sale_price')
+                    variant_price_in_dolor = variant_data.get('price_in_dolor')
+                    variant_sale_price_in_dollar = variant_data.get('sale_price_in_dollar')
                     
                     # Create or get variant
                     variant_obj, created = product_variant.objects.get_or_create(
@@ -1990,15 +1994,19 @@ class ProductCreateView(View):
                         size_id=size_id if size_id else None,
                         color_id=color_id if color_id else None,
                         defaults={
-                            'stock_quantity': stock_quantity,
-                            'sku': sku,
+                            'MRP': variant_MRP if variant_MRP else None,
+                            'sale_price': variant_sale_price if variant_sale_price else None,
+                            'price_in_dolor': variant_price_in_dolor if variant_price_in_dolor else None,
+                            'sale_price_in_dollar': variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
                             'status': variant_status
                         }
                     )
                     
                     if not created:
-                        variant_obj.stock_quantity = stock_quantity
-                        variant_obj.sku = sku
+                        variant_obj.MRP = variant_MRP if variant_MRP else None
+                        variant_obj.sale_price = variant_sale_price if variant_sale_price else None
+                        variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
+                        variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
                         variant_obj.status = variant_status
                         variant_obj.save()
                     
@@ -2064,8 +2072,10 @@ class ProductEditView(View):
                 'size_name': variant.size.name if variant.size else None,
                 'color_id': variant.color.id if variant.color else None,
                 'color_name': variant.color.name if variant.color else None,
-                'stock_quantity': variant.stock_quantity,
-                'sku': variant.sku,
+                'MRP': str(variant.MRP) if variant.MRP else '',
+                'sale_price': str(variant.sale_price) if variant.sale_price else '',
+                'price_in_dolor': str(variant.price_in_dolor) if variant.price_in_dolor else '',
+                'sale_price_in_dollar': str(variant.sale_price_in_dollar) if variant.sale_price_in_dollar else '',
                 'status': variant.status,
                 'images': variant_images
             })
@@ -2183,11 +2193,15 @@ class ProductEditView(View):
                     variant_id = variant_data.get('id')
                     size_id = variant_data.get('size_id')
                     color_id = variant_data.get('color_id')
-                    stock_quantity = variant_data.get('stock_quantity', 0)
-                    sku = variant_data.get('sku', '')
                     variant_status = variant_data.get('status', True)
                     delete_variant_images = variant_data.get('delete_images', [])
                     variant_images = variant_data.get('images', [])
+                    
+                    # Variant price fields
+                    variant_MRP = variant_data.get('MRP')
+                    variant_sale_price = variant_data.get('sale_price')
+                    variant_price_in_dolor = variant_data.get('price_in_dolor')
+                    variant_sale_price_in_dollar = variant_data.get('sale_price_in_dollar')
                     
                     # Delete variant images
                     for img_id in delete_variant_images:
@@ -2206,8 +2220,10 @@ class ProductEditView(View):
                             variant_obj = product_variant.objects.get(id=variant_id, product=product_obj)
                             variant_obj.size_id = size_id if size_id else None
                             variant_obj.color_id = color_id if color_id else None
-                            variant_obj.stock_quantity = stock_quantity
-                            variant_obj.sku = sku
+                            variant_obj.MRP = variant_MRP if variant_MRP else None
+                            variant_obj.sale_price = variant_sale_price if variant_sale_price else None
+                            variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
+                            variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
                             variant_obj.status = variant_status
                             variant_obj.save()
                             existing_variant_ids.add(variant_obj.id)
@@ -2216,8 +2232,10 @@ class ProductEditView(View):
                                 product=product_obj,
                                 size_id=size_id if size_id else None,
                                 color_id=color_id if color_id else None,
-                                stock_quantity=stock_quantity,
-                                sku=sku,
+                                MRP=variant_MRP if variant_MRP else None,
+                                sale_price=variant_sale_price if variant_sale_price else None,
+                                price_in_dolor=variant_price_in_dolor if variant_price_in_dolor else None,
+                                sale_price_in_dollar=variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
                                 status=variant_status
                             )
                             existing_variant_ids.add(variant_obj.id)
@@ -2227,14 +2245,18 @@ class ProductEditView(View):
                             size_id=size_id if size_id else None,
                             color_id=color_id if color_id else None,
                             defaults={
-                                'stock_quantity': stock_quantity,
-                                'sku': sku,
+                                'MRP': variant_MRP if variant_MRP else None,
+                                'sale_price': variant_sale_price if variant_sale_price else None,
+                                'price_in_dolor': variant_price_in_dolor if variant_price_in_dolor else None,
+                                'sale_price_in_dollar': variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
                                 'status': variant_status
                             }
                         )
                         if not created:
-                            variant_obj.stock_quantity = stock_quantity
-                            variant_obj.sku = sku
+                            variant_obj.MRP = variant_MRP if variant_MRP else None
+                            variant_obj.sale_price = variant_sale_price if variant_sale_price else None
+                            variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
+                            variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
                             variant_obj.status = variant_status
                             variant_obj.save()
                         existing_variant_ids.add(variant_obj.id)
