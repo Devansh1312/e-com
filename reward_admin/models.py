@@ -266,6 +266,7 @@ class product_variant(models.Model):
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Sale price for this variant')
     price_in_dolor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='MRP in dollars')
     sale_price_in_dollar = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Sale price in dollars')
+    url = models.URLField(null=True, blank=True, help_text='Product variant URL')
     status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)

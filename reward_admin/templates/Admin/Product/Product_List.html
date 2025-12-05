@@ -748,7 +748,7 @@
         ];
 
         // Function to create variant HTML for Add Modal
-        function createVariantHTML(sizeId = '', colorId = '', mrp = '', salePrice = '', priceInDolor = '', salePriceInDollar = '', status = true, variantId = null) {
+        function createVariantHTML(sizeId = '', colorId = '', mrp = '', salePrice = '', priceInDolor = '', salePriceInDollar = '', url = '', status = true, variantId = null) {
             const variantIndex = variantId ? variantId : variantCounter++;
             let sizeOptions = '<option value="">Select Size</option>';
             let colorOptions = '<option value="">Select Color</option>';
@@ -804,6 +804,10 @@
                         <div class="col-md-3 mb-2">
                             <label class="form-label">Sale Price (USD)</label>
                             <input type="number" class="form-control variant-sale-price-dollar" value="${salePriceInDollar}" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">URL</label>
+                            <input type="url" class="form-control variant-url" value="${url}" placeholder="https://example.com">
                         </div>
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Variant Images</label>
@@ -889,6 +893,10 @@
                             <input type="number" class="form-control variant-sale-price-dollar" value="${variantData.sale_price_in_dollar || ''}" step="0.01" min="0" placeholder="0.00">
                         </div>
                         <div class="col-md-12 mb-2">
+                            <label class="form-label">URL</label>
+                            <input type="url" class="form-control variant-url" value="${variantData.url || ''}" placeholder="https://example.com">
+                        </div>
+                        <div class="col-md-12 mb-2">
                             <label class="form-label">Existing Variant Images</label>
                             <div class="current-images">${existingImagesHTML || '<p class="text-muted">No images</p>'}</div>
                         </div>
@@ -916,6 +924,7 @@
                 const salePrice = $card.find('.variant-sale-price').val();
                 const priceInDolor = $card.find('.variant-price-dolor').val();
                 const salePriceInDollar = $card.find('.variant-sale-price-dollar').val();
+                const url = $card.find('.variant-url').val();
                 const status = $card.find('.variant-status').is(':checked');
                 const deleteImages = [];
                 $card.find('.variant-delete-image:checked').each(function() {
@@ -930,6 +939,7 @@
                     sale_price: salePrice || null,
                     price_in_dolor: priceInDolor || null,
                     sale_price_in_dollar: salePriceInDollar || null,
+                    url: url || null,
                     status: status,
                     delete_images: deleteImages,
                     images: [0] // Placeholder for image indices
@@ -1156,8 +1166,9 @@
                     `;
                     
                     if (response.variants && response.variants.length > 0) {
-                        html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>MRP (₹)</th><th>Sale Price (₹)</th><th>Price (USD)</th><th>Sale Price (USD)</th><th>Status</th><th>Images</th></tr></thead><tbody>';
+                        html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>MRP (₹)</th><th>Sale Price (₹)</th><th>Price (USD)</th><th>Sale Price (USD)</th><th>URL</th><th>Status</th><th>Images</th></tr></thead><tbody>';
                         response.variants.forEach(function(variant) {
+                            const urlDisplay = variant.url ? `<a href="${variant.url}" target="_blank" rel="noopener noreferrer">${variant.url.substring(0, 30)}${variant.url.length > 30 ? '...' : ''}</a>` : '-';
                             html += `
                                 <tr>
                                     <td>${variant.size_name || 'N/A'}</td>
@@ -1166,6 +1177,7 @@
                                     <td>₹${variant.sale_price || '-'}</td>
                                     <td>$${variant.price_in_dolor || '-'}</td>
                                     <td>$${variant.sale_price_in_dollar || '-'}</td>
+                                    <td>${urlDisplay}</td>
                                     <td><span class="badge badge-${variant.status ? 'success' : 'danger'}">${variant.status ? 'Active' : 'Inactive'}</span></td>
                                     <td>${variant.images ? variant.images.length : 0} image(s)</td>
                                 </tr>

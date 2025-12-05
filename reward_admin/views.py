@@ -1986,6 +1986,7 @@ class ProductCreateView(View):
                     variant_sale_price = variant_data.get('sale_price')
                     variant_price_in_dolor = variant_data.get('price_in_dolor')
                     variant_sale_price_in_dollar = variant_data.get('sale_price_in_dollar')
+                    variant_url = variant_data.get('url')
                     
                     # Create or get variant
                     variant_obj, created = product_variant.objects.get_or_create(
@@ -1997,6 +1998,7 @@ class ProductCreateView(View):
                             'sale_price': variant_sale_price if variant_sale_price else None,
                             'price_in_dolor': variant_price_in_dolor if variant_price_in_dolor else None,
                             'sale_price_in_dollar': variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
+                            'url': variant_url if variant_url else None,
                             'status': variant_status
                         }
                     )
@@ -2006,6 +2008,7 @@ class ProductCreateView(View):
                         variant_obj.sale_price = variant_sale_price if variant_sale_price else None
                         variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
                         variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
+                        variant_obj.url = variant_url if variant_url else None
                         variant_obj.status = variant_status
                         variant_obj.save()
                     
@@ -2075,6 +2078,7 @@ class ProductEditView(View):
                 'sale_price': str(variant.sale_price) if variant.sale_price else '',
                 'price_in_dolor': str(variant.price_in_dolor) if variant.price_in_dolor else '',
                 'sale_price_in_dollar': str(variant.sale_price_in_dollar) if variant.sale_price_in_dollar else '',
+                'url': variant.url if variant.url else '',
                 'status': variant.status,
                 'images': variant_images
             })
@@ -2201,6 +2205,7 @@ class ProductEditView(View):
                     variant_sale_price = variant_data.get('sale_price')
                     variant_price_in_dolor = variant_data.get('price_in_dolor')
                     variant_sale_price_in_dollar = variant_data.get('sale_price_in_dollar')
+                    variant_url = variant_data.get('url')
                     
                     # Delete variant images
                     for img_id in delete_variant_images:
@@ -2223,6 +2228,7 @@ class ProductEditView(View):
                             variant_obj.sale_price = variant_sale_price if variant_sale_price else None
                             variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
                             variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
+                            variant_obj.url = variant_url if variant_url else None
                             variant_obj.status = variant_status
                             variant_obj.save()
                             existing_variant_ids.add(variant_obj.id)
@@ -2235,6 +2241,7 @@ class ProductEditView(View):
                                 sale_price=variant_sale_price if variant_sale_price else None,
                                 price_in_dolor=variant_price_in_dolor if variant_price_in_dolor else None,
                                 sale_price_in_dollar=variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
+                                url=variant_url if variant_url else None,
                                 status=variant_status
                             )
                             existing_variant_ids.add(variant_obj.id)
@@ -2248,6 +2255,7 @@ class ProductEditView(View):
                                 'sale_price': variant_sale_price if variant_sale_price else None,
                                 'price_in_dolor': variant_price_in_dolor if variant_price_in_dolor else None,
                                 'sale_price_in_dollar': variant_sale_price_in_dollar if variant_sale_price_in_dollar else None,
+                                'url': variant_url if variant_url else None,
                                 'status': variant_status
                             }
                         )
@@ -2256,6 +2264,7 @@ class ProductEditView(View):
                             variant_obj.sale_price = variant_sale_price if variant_sale_price else None
                             variant_obj.price_in_dolor = variant_price_in_dolor if variant_price_in_dolor else None
                             variant_obj.sale_price_in_dollar = variant_sale_price_in_dollar if variant_sale_price_in_dollar else None
+                            variant_obj.url = variant_url if variant_url else None
                             variant_obj.status = variant_status
                             variant_obj.save()
                         existing_variant_ids.add(variant_obj.id)
