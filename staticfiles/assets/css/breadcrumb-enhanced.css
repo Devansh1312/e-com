@@ -1,0 +1,259 @@
+/* Enhanced Breadcrumb Styling for Django E-commerce Project */
+
+/* Page Title Section */
+.page-title {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.page-title h3 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+    text-transform: capitalize;
+}
+
+/* Breadcrumb Navigation */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.breadcrumb-item a {
+    color: #007bff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.breadcrumb-item a:hover {
+    color: #0056b3;
+    background: rgba(0, 123, 255, 0.1);
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.breadcrumb-item.active {
+    color: #495057;
+    font-weight: 600;
+    background: rgba(73, 80, 87, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+    margin: 0 8px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+.breadcrumb-item svg {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    fill: currentColor;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-title {
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-title .row > div {
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-title h3 {
+        font-size: 1.5rem;
+    }
+    
+    .breadcrumb {
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+    
+    .breadcrumb-item {
+        font-size: 13px;
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        margin: 0 6px;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-title h3 {
+        font-size: 1.25rem;
+    }
+    
+    .breadcrumb-item {
+        font-size: 12px;
+    }
+    
+    .breadcrumb-item a,
+    .breadcrumb-item.active {
+        padding: 3px 6px;
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        margin: 0 4px;
+    }
+}
+
+/* Theme Variations */
+.breadcrumb-colored {
+    padding: 12px 16px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.breadcrumb-colored .breadcrumb-item {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.breadcrumb-colored .breadcrumb-item a {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.breadcrumb-colored .breadcrumb-item a:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.breadcrumb-colored .breadcrumb-item.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.breadcrumb-colored .breadcrumb-item + .breadcrumb-item::before {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Dark Theme Support */
+[data-theme="dark"] .page-title {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-bottom: 1px solid #34495e;
+}
+
+[data-theme="dark"] .page-title h3 {
+    color: #ecf0f1;
+}
+
+[data-theme="dark"] .breadcrumb-item {
+    color: #bdc3c7;
+}
+
+[data-theme="dark"] .breadcrumb-item a {
+    color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+[data-theme="dark"] .breadcrumb-item a:hover {
+    color: #2980b9;
+    background: rgba(52, 152, 219, 0.2);
+}
+
+[data-theme="dark"] .breadcrumb-item.active {
+    color: #ecf0f1;
+    background: rgba(236, 240, 241, 0.1);
+}
+
+/* Animation Effects */
+.breadcrumb-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.breadcrumb-item:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.breadcrumb-item:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.breadcrumb-item:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Special Breadcrumb Variants */
+.breadcrumb-icon {
+    --bs-breadcrumb-divider: '>';
+}
+
+.breadcrumb-icon .breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.breadcrumb-no-divider {
+    --bs-breadcrumb-divider: '';
+}
+
+.breadcrumb-no-divider .breadcrumb-item + .breadcrumb-item::before {
+    display: none;
+}
+
+/* Integration with existing design system */
+.page-title .breadcrumb {
+    background: transparent !important;
+}
+
+.page-title .breadcrumb-item.txt-dark::before {
+    color: #2c3e50;
+}
+
+/* Print styles */
+@media print {
+    .breadcrumb {
+        display: none;
+    }
+    
+    .page-title {
+        border-bottom: 2px solid #000;
+        background: none !important;
+        box-shadow: none !important;
+    }
+    
+    .page-title h3 {
+        color: #000 !important;
+    }
+}

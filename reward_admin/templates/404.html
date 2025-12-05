@@ -1,0 +1,33 @@
+{% load static %} {% load sass_tags %}
+{% load custom_filters %}
+{% load permission_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link rel="icon" href="{{ fav_icon }}" type="image/x-icon">
+		<link rel="shortcut icon" href="{{ fav_icon }}" type="image/x-icon">
+    <link rel="stylesheet" href="{% static 'assets/css/404.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="error-content">
+            <div class="logo">
+                <img src="{{ website_logo }}" alt="Logo">
+            </div>
+            <div class="error-number">
+                <span>4</span>
+                <span>0</span>
+                <span>4</span>
+            </div>
+            <h2>Whoops! Lost in Space</h2>
+            <p>The page you're looking for has floated away into space</p>
+            <div class="actions">
+                <a href="{% url 'adminlogin' %}" class="home-btn">Home Page</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load sass_tags %}
+{% load permission_tags %}
+
+{% block css %}
+<!-- Plugins css start-->
+<link rel="stylesheet" type="text/css" href="{% sass_src 'assets/scss/vendors/datatables.scss' %}">
+<style>
+    .badge-success {
+        background-color: #28a745;
+    }
+    .badge-danger {
+        background-color: #dc3545;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .action-menu-container {
+        position: relative;
+        display: inline-block;
+    }
+    .action-card {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        width: auto;
+        min-width: 120px;
+    }
+    .action-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .action-card li {
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        font-size: small;
+    }
+    .action-card li:last-child {
+        border-bottom: none;
+    }
+    .action-card li a {
+        color: #333;
+        display: block;
+    }
+    .action-card li a:hover {
+        color: #07bc0c;
+    }
+</style>
+<!-- Plugins css Ends-->
+{% endblock %}
+
+{% block title %}Customer List{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-fluid">
+        {% include "layouts/breadcrumb.html" %}
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="display" id="customer-table" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Username</th>
+                                        <th>Full Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Cities</th>
+                                        <th>Registered</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be loaded via DataTables -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<!-- Required JS -->
+<script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'assets/js/datatable/datatables/datatable.custom.js' %}"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initialize DataTable with server-side processing
+    var table = $('#customer-table').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "ajax": {
+            "url": window.location.pathname,
+            "type": "POST",
+            "data": function(d) {
+                // Add CSRF token
+                d.csrfmiddlewaretoken = getCookie('csrftoken');
+            },
+            "error": function(xhr, error, code) {
+                console.error(xhr, error, code);
+                $('#customer-table').DataTable().clear().draw();
+                $('#customer-table tbody').html(
+                    '<tr><td colspan="9" class="text-center text-danger py-4">' +
+                    '<i class="fas fa-exclamation-circle mr-2"></i>Error loading data</td></tr>'
+                );
+            }
+        },
+        "columns": [
+            { 
+                "data": "counter",
+                "orderable": false 
+            },
+            { 
+                "data": "username",
+                "orderable": true 
+            },
+            { 
+                "data": "full_name",
+                "orderable": true 
+            },
+            { 
+                "data": "email",
+                "orderable": true 
+            },
+            { 
+                "data": "phone",
+                "orderable": true 
+            },
+            { 
+                "data": "cities",
+                "orderable": false
+            },
+            { 
+                "data": "created_at",
+                "orderable": true 
+            },
+            { 
+                "data": "status",
+                "orderable": false
+            },
+            { 
+                "data": "actions",
+                "orderable": false
+            }
+        ],
+        "responsive": true,
+        "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+        "pageLength": 10,
+        "order": [[6, "desc"]], // Sort by registration date descending
+        "language": {
+            "lengthMenu": "Show _MENU_ entries",
+            "zeroRecords": "No matching records found",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "search": "Search:",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        },
+        "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+               "<'row'<'col-sm-12'tr>>" +
+               "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        "initComplete": function() {
+            // Add custom styling after table initialization
+            $('.dataTables_length select').addClass('form-control form-control-sm');
+            $('.dataTables_filter input').addClass('form-control form-control-sm');
+        }
+    });
+
+    // Action menu toggle
+    $(document).on('click', '.three-dots-menu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Close all other action cards first
+        $('.action-card').not($(this).siblings('.action-card')).hide();
+        
+        // Toggle the current action card
+        var actionCard = $(this).siblings('.action-card');
+        actionCard.toggle();
+    });
+    
+    // Hide action card if clicking outside
+    $(document).on('click', function(event) {
+        if (!$(event.target).closest('.action-menu-container').length) {
+            $('.action-card').hide();
+        }
+    });
+
+    // Toggle Customer Status
+    $(document).on('click', '.toggle-status', function(e) {
+        e.preventDefault();
+        const customerId = $(this).data('id');
+        const statusBtn = $(this);
+        statusBtn.prop('disabled', true);
+        
+        $.ajax({
+            url: `/customer/toggle-status/${customerId}/`,
+            type: 'POST',
+            data: {
+                csrfmiddlewaretoken: getCookie('csrftoken')
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Reload the page to show updated status
+                    window.location.reload();
+                }
+            },
+            error: function(xhr) {
+                try {
+                    var error = JSON.parse(xhr.responseText);
+                    alert(error.message || 'Error toggling status');
+                } catch (e) {
+                    alert('An error occurred while processing your request');
+                }
+            },
+            complete: function() {
+                statusBtn.prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

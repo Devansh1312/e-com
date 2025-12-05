@@ -1,0 +1,166 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 20px;
+    max-width: 600px;
+    width: 100%;
+}
+
+.error-content {
+    background-color: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.8s ease-in;
+}
+
+.logo {
+    margin-bottom: 20px;
+}
+
+.logo img {
+    width: 80px;
+    height: auto;
+    animation: float 3s ease-in-out infinite;
+}
+
+.error-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 120px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 30px 0;
+}
+
+.error-number span {
+    animation: bounce 2s infinite;
+}
+
+.error-number .zero {
+    margin: 0 10px;
+    color: #3498db;
+    animation: none;
+}
+
+h2 {
+    font-size: 28px;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+p {
+    font-size: 18px;
+    color: #7f8c8d;
+    margin-bottom: 30px;
+}
+
+.actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.back-btn, .home-btn {
+    padding: 12px 30px;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.back-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.home-btn {
+    background-color: #fff;
+    color: #3498db;
+    border: 2px solid #3498db;
+}
+
+.back-btn:hover, .home-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .error-number {
+        font-size: 80px;
+    }
+    
+    .logo-zero {
+        width: 70px;
+        height: 70px;
+    }
+    
+    h2 {
+        font-size: 24px;
+    }
+    
+    p {
+        font-size: 16px;
+    }
+    
+    .error-content {
+        padding: 30px;
+    }
+    
+    .actions {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .back-btn, .home-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
