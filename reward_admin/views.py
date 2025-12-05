@@ -1813,17 +1813,7 @@ class ProductCategoryEditView(View):
             category.name = name
             category.status = status
 
-            # Handle image removal
-            if remove_image and category.image:
-                # Delete existing file from storage
-                try:
-                    if default_storage.exists(category.image.name):
-                        default_storage.delete(category.image.name)
-                except Exception:
-                    pass
-                category.image = None
-
-            # Handle new image upload (replace existing)
+            # Handle new image upload (replace existing) - priority over remove_image
             if image_file:
                 allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
                 if image_file.content_type not in allowed_types:
@@ -1834,7 +1824,7 @@ class ProductCategoryEditView(View):
                     messages.error(request, "Image too large. Maximum size is 5MB.")
                     return redirect('product_category_list')
 
-                # Delete old file if exists
+                # Always delete old file if exists when new image is provided
                 if category.image:
                     try:
                         if default_storage.exists(category.image.name):
@@ -1848,6 +1838,15 @@ class ProductCategoryEditView(View):
                 file_path = os.path.join("category_images", unique_filename)
                 default_storage.save(file_path, image_file)
                 category.image = file_path
+            # Handle image removal only if no new image is provided
+            elif remove_image and category.image:
+                # Delete existing file from storage
+                try:
+                    if default_storage.exists(category.image.name):
+                        default_storage.delete(category.image.name)
+                except Exception:
+                    pass
+                category.image = None
 
             category.save()
             messages.success(request, "Product category updated successfully")
@@ -2576,19 +2575,8 @@ class DashboardBannerEditView(View):
             banner.title = title
             banner.title_1 = title_1
             banner.title_2 = title_2
-            banner.save()
 
-            # Handle image removal
-            if remove_image and banner.image:
-                # Delete existing file from storage
-                try:
-                    if default_storage.exists(banner.image.name):
-                        default_storage.delete(banner.image.name)
-                except Exception:
-                    pass
-                banner.image = None
-
-            # Handle new image upload (replace existing)
+            # Handle new image upload (replace existing) - priority over remove_image
             if image_file:
                 allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
                 if image_file.content_type not in allowed_types:
@@ -2599,7 +2587,7 @@ class DashboardBannerEditView(View):
                     messages.error(request, "Image too large. Maximum size is 5MB.")
                     return redirect('dashboard_banner_list')
 
-                # Delete old file if exists
+                # Always delete old file if exists when new image is provided
                 if banner.image:
                     try:
                         if default_storage.exists(banner.image.name):
@@ -2613,6 +2601,15 @@ class DashboardBannerEditView(View):
                 file_path = os.path.join("dashboard_banner", unique_filename)
                 default_storage.save(file_path, image_file)
                 banner.image = file_path
+            # Handle image removal only if no new image is provided
+            elif remove_image and banner.image:
+                # Delete existing file from storage
+                try:
+                    if default_storage.exists(banner.image.name):
+                        default_storage.delete(banner.image.name)
+                except Exception:
+                    pass
+                banner.image = None
 
             banner.save()
             messages.success(request, "Dashboard banner updated successfully")
