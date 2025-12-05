@@ -93,34 +93,34 @@ AUTHENTICATION_BACKENDS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Database
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'ecom',  # Name of your database
-#         'USER': 'root',
-#         'PASSWORD': '',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'charset': 'utf8mb4',  # Set charset to utf8mb4 to support emojis
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
-#         }
-#     }
-# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'Kitchivo$ecom',   # Full database name (username$database)
-        'USER': 'Kitchivo',        # Your PythonAnywhere DB username
-        'PASSWORD': 'JT8h#7-Cw^L:gin',  # Your DB password
-        'HOST': 'Kitchivo.mysql.pythonanywhere-services.com',  # Remote MySQL host
+        'NAME': 'ecom',  # Name of your database
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
+            'charset': 'utf8mb4',  # Set charset to utf8mb4 to support emojis
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
         }
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'Kitchivo$ecom',   # Full database name (username$database)
+#         'USER': 'Kitchivo',        # Your PythonAnywhere DB username
+#         'PASSWORD': 'JT8h#7-Cw^L:gin',  # Your DB password
+#         'HOST': 'Kitchivo.mysql.pythonanywhere-services.com',  # Remote MySQL host
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'charset': 'utf8mb4',
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
+#         }
+#     }
+# }
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
