@@ -49,8 +49,8 @@
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
                                         <td>
-                                            {% if category.image %}
-                                                <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                            {% if category.image_url %}
+                                                <img src="{{ category.image_url }}" alt="{{ category.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.onerror=null; this.src='{% static "assets/images/product/1.jpg" %}';">
                                             {% else %}
                                                 <span class="text-muted small">No Image</span>
                                             {% endif %}
@@ -75,7 +75,7 @@
                                                             data-category-id="{{ category.id }}" 
                                                             data-category-name="{{ category.name }}"
                                                             data-category-status="{% if category.status %}true{% else %}false{% endif %}"
-                                                            data-category-image-url="{% if category.image %}{{ category.image.url }}{% endif %}"> Edit </a>
+                                                            data-category-image-url="{% if category.image_url %}{{ category.image_url }}{% endif %}"> Edit </a>
                                                         </li>
                                                         <li style="padding: 8px 12px; border-top: 1px solid #eee;">
                                                             <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal" data-category-id="{{ category.id }}">
@@ -104,7 +104,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="{% url 'product_category_create' %}" id="addCategoryForm" enctype="multipart/form-data">
+                        <form method="post" action="{% url 'product_category_create' %}" id="addCategoryForm">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-12 mb-3">
@@ -120,9 +120,9 @@
                                     </div>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="image" class="form-label">Category Image (single)</label>
-                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                    <small class="text-muted">Recommended size small square image. Max 5MB.</small>
+                                    <label for="image_url" class="form-label">Category Image URL</label>
+                                    <input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://example.com/image.jpg">
+                                    <small class="text-muted">Enter image URL. Recommended: small square image.</small>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">Add Category</button>
@@ -143,7 +143,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" id="editCategoryForm" enctype="multipart/form-data">
+                        <form method="post" id="editCategoryForm">
                             {% csrf_token %}
                             <input type="hidden" id="categoryId" name="id">
                             <div class="row">
@@ -162,11 +162,11 @@
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Current Image</label>
                                     <div class="mb-2">
-                                        <img id="edit_category_image_preview" src="" alt="Category Image" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; display: none;">
+                                        <img id="edit_category_image_preview" src="" alt="Category Image" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; display: none;" onerror="this.style.display='none'; document.getElementById('edit_no_image_text').style.display='inline';">
                                         <span id="edit_no_image_text" class="text-muted small">No Image</span>
                                     </div>
-                                    <label for="edit_image" class="form-label">Change Image</label>
-                                    <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
+                                    <label for="edit_image_url" class="form-label">Image URL</label>
+                                    <input type="text" class="form-control" id="edit_image_url" name="image_url" placeholder="https://example.com/image.jpg">
                                     <div class="form-check mt-2">
                                         <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
                                         <label class="form-check-label" for="remove_image">Remove existing image</label>
@@ -271,9 +271,10 @@
             form.attr('action', "{% url 'product_category_edit' 0 %}".replace("0", categoryId));
             form.find('#categoryId').val(categoryId);
             form.find('#edit_name').val(name || "");
+            form.find('#edit_image_url').val(imageUrl || "");
             
-            // Set checkbox status
-            form.find('#edit_status').prop('checked', status === 'true');
+            // Set checkbox status - handle both boolean and string values
+            form.find('#edit_status').prop('checked', status === 'true' || status === true);
             
             // Set image preview
             var imgEl = $('#edit_category_image_preview');

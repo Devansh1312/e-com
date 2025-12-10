@@ -193,12 +193,12 @@ class FAQ(models.Model):
     
 class product_category(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
-    # Single image per category (optional)
-    image = models.ImageField(
-        upload_to="category_images/",
+    # Single image URL per category (optional)
+    image_url = models.URLField(
+        max_length=500,
         null=True,
         blank=True,
-        help_text="Single image representing this category"
+        help_text="Image URL representing this category"
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     status = models.BooleanField(default=True, help_text='0 = InActive | 1 = Active')
@@ -285,7 +285,7 @@ class product_image(models.Model):
     product = models.ForeignKey(product, on_delete=models.CASCADE, related_name='images')
     variant = models.ForeignKey(product_variant, on_delete=models.CASCADE, null=True, blank=True, related_name='images', 
                                  help_text='If set, image is specific to this variant. If null, image is common for all variants.')
-    image = models.ImageField(upload_to="product_images/", null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True, help_text='URL of the product image stored externally')
     is_primary = models.BooleanField(default=False, help_text='Primary image for the product/variant')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -352,7 +352,7 @@ class cart(models.Model):
 
 
 class dashboard_banner(models.Model):
-    image = models.ImageField(upload_to="dashboard_banner/", null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True, help_text="Banner image URL")
     title = models.TextField(null=True, blank=True)
     title_1 = models.TextField(null=True, blank=True)
     title_2 = models.TextField(null=True, blank=True)

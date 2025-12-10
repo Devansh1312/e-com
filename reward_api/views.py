@@ -80,11 +80,14 @@ def _build_absolute_media_url(request, path):
 
 
 def _serialize_image(img, request=None):
-    if not img or not img.image:
+    if not img:
         return None
-    url = _build_absolute_media_url(request, img.image.url)
-    if not url:
+    # Use image_url field (external URL)
+    if img.image_url:
+        url = img.image_url
+    else:
         return None
+    
     return {
         'id': img.id,
         'url': url,
@@ -96,14 +99,12 @@ def serialize_dashboard_banner(banner_obj, request=None):
     if not banner_obj:
         return None
 
-    image_url = _build_absolute_media_url(request, banner_obj.image.url) if banner_obj.image else None
-
     return {
         'id': banner_obj.id,
         'title': banner_obj.title,
         'title_1': banner_obj.title_1,
         'title_2': banner_obj.title_2,
-        'image': image_url,
+        'image': banner_obj.image_url,
         'created_at': banner_obj.created_at.isoformat() if banner_obj.created_at else None,
         'updated_at': banner_obj.updated_at.isoformat() if banner_obj.updated_at else None,
     }

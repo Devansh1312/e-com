@@ -265,6 +265,26 @@
         gap: 10px;
         margin-top: 10px;
     }
+    .image-url-card {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #f9f9f9;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .image-url-card input {
+        flex: 1;
+    }
+    .image-url-preview {
+        width: 60px;
+        height: 60px;
+        border-radius: 4px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+    }
 </style>
 <!-- Plugins css Ends-->
 {% endblock %}
@@ -314,7 +334,7 @@
                                         <td>{{ forloop.counter }}</td>
                                         <td>
                                             {% if product.images.first %}
-                                                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                                <img src="{{ product.images.first.image_url }}" alt="{{ product.name }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Crect width=\'50\' height=\'50\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E';">
                                             {% else %}
                                                 <span class="text-muted">No Image</span>
                                             {% endif %}
@@ -421,11 +441,11 @@
                                     <small class="text-muted">YouTube video URL for this product</small>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="images" class="form-label">Common Product Images</label>
-                                    <input type="file" class="form-control" id="images" name="images" multiple accept="image/*">
-                                    <small class="text-muted">Common images shared across all variants. Maximum file size: 5MB each.</small>
-                                    <div class="image-preview-container" id="imagePreview"></div>
-                                    <div class="invalid-feedback" id="images-error"></div>
+                                    <label class="form-label">Common Product Image URLs</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="addImageUrlBtn">+ Add Image URL</button>
+                                    <div id="imageUrlsContainer"></div>
+                                    <input type="hidden" id="image_urls_data" name="image_urls">
+                                    <small class="text-muted">Add image URLs. These are common images shared across all variants.</small>
                                 </div>
                                 
                                 <!-- Variants Section -->
@@ -512,14 +532,15 @@
                                     <small class="text-muted">YouTube video URL for this product</small>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label class="form-label">Current Images</label>
-                                    <div class="current-images" id="currentImages"></div>
+                                    <label class="form-label">Current Common Images</label>
+                                    <div id="currentImages"></div>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="edit_images" class="form-label">Add New Common Images</label>
-                                    <input type="file" class="form-control" id="edit_images" name="new_images" multiple accept="image/*">
-                                    <small class="text-muted">Common images shared across all variants. Maximum file size: 5MB each.</small>
-                                    <div class="image-preview-container" id="editImagePreview"></div>
+                                    <label class="form-label">Add New Common Image URLs</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="addEditImageUrlBtn">+ Add Image URL</button>
+                                    <div id="editImageUrlsContainer"></div>
+                                    <input type="hidden" id="new_image_urls_data" name="new_image_urls">
+                                    <small class="text-muted">Add new image URLs. These are common images shared across all variants.</small>
                                 </div>
                                 
                                 <!-- Variants Section for Edit -->
@@ -696,10 +717,14 @@
             $(this).find('form')[0].reset();
             $(this).find('.image-preview-container').empty();
             $('#currentImages').empty();
+            $('#imageUrlsContainer').empty();
+            $('#editImageUrlsContainer').empty();
             $('#variantsContainer').empty();
             $('#editVariantsContainer').empty();
             variantCounter = 0;
             editVariantCounter = 0;
+            imageUrlCounter = 0;
+            editImageUrlCounter = 0;
         });
 
         // Clear validation when user starts typing
@@ -734,6 +759,112 @@
         // Variant Management Functions
         let variantCounter = 0;
         let editVariantCounter = 0;
+        let imageUrlCounter = 0;
+        let editImageUrlCounter = 0;
+
+        // Function to create image URL input card
+        function createImageUrlCard(url = '', index = null) {
+            const urlIndex = index !== null ? index : imageUrlCounter++;
+            return `
+                <div class="image-url-card" data-url-index="${urlIndex}">
+                    <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
+                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
+                </div>
+            `;
+        }
+
+        // Function to create edit image URL input card
+        function createEditImageUrlCard(url = '', index = null) {
+            const urlIndex = index !== null ? index : editImageUrlCounter++;
+            return `
+                <div class="image-url-card" data-url-index="${urlIndex}">
+                    <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
+                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
+                </div>
+            `;
+        }
+
+        // Function to create variant image URL input card
+        function createVariantImageUrlCard(url = '') {
+            return `
+                <div class="image-url-card variant-image-url-card">
+                    <input type="url" class="form-control variant-image-url-input" placeholder="https://example.com/variant-image.jpg" value="${url}">
+                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+                    <button type="button" class="btn btn-sm btn-danger remove-variant-image-url">Remove</button>
+                </div>
+            `;
+        }
+
+        // Update image preview when URL changes
+        $(document).on('input', '.image-url-input, .variant-image-url-input', function() {
+            const url = $(this).val().trim();
+            const $preview = $(this).siblings('.image-url-preview');
+            
+            if (url) {
+                $preview.attr('src', url).show();
+                $preview.on('error', function() {
+                    $(this).attr('src', 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ffcccc\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23cc0000\' font-size=\'10\'%3EInvalid%3C/text%3E%3C/svg%3E');
+                });
+            } else {
+                $preview.hide();
+            }
+            
+            // Update hidden input
+            updateImageUrlsData();
+        });
+
+        // Add common image URL (Add Modal)
+        $('#addImageUrlBtn').on('click', function() {
+            $('#imageUrlsContainer').append(createImageUrlCard());
+        });
+
+        // Add common image URL (Edit Modal)
+        $('#addEditImageUrlBtn').on('click', function() {
+            $('#editImageUrlsContainer').append(createEditImageUrlCard());
+        });
+
+        // Remove common image URL
+        $(document).on('click', '.remove-image-url', function() {
+            $(this).closest('.image-url-card').remove();
+            updateImageUrlsData();
+        });
+
+        // Add variant image URL
+        $(document).on('click', '.add-variant-image-url', function() {
+            const variantIndex = $(this).data('variant-index');
+            const container = $(`.variant-image-urls-container[data-variant-index="${variantIndex}"]`);
+            container.append(createVariantImageUrlCard());
+        });
+
+        // Remove variant image URL
+        $(document).on('click', '.remove-variant-image-url', function() {
+            $(this).closest('.variant-image-url-card').remove();
+            updateVariantsData('#variantsContainer', '#variants_data');
+            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+        });
+
+        // Function to collect image URLs from container
+        function collectImageUrls(containerId) {
+            const urls = [];
+            $(`${containerId} .image-url-input`).each(function() {
+                const url = $(this).val().trim();
+                if (url) {
+                    urls.push(url);
+                }
+            });
+            return urls.join('\\n');
+        }
+
+        // Update image URLs hidden input
+        function updateImageUrlsData() {
+            const urls = collectImageUrls('#imageUrlsContainer');
+            $('#image_urls_data').val(urls);
+            
+            const editUrls = collectImageUrls('#editImageUrlsContainer');
+            $('#new_image_urls_data').val(editUrls);
+        }
 
         // Sizes and Colors data
         const sizesData = [
@@ -810,12 +941,10 @@
                             <input type="url" class="form-control variant-url" value="${url}" placeholder="https://example.com">
                         </div>
                         <div class="col-md-12 mb-2">
-                            <label class="form-label">Variant Images</label>
-                            <input type="file" class="form-control variant-image-input" 
-                                   name="variant_images_${sizeId || variantIndex}_${colorId || variantIndex}_0" 
-                                   multiple accept="image/*">
-                            <small class="text-muted">Images specific to this variant</small>
-                            <div class="variant-images-preview" data-variant-index="${variantIndex}"></div>
+                            <label class="form-label">Variant Image URLs</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
+                            <small class="text-muted">Add image URLs specific to this variant</small>
                         </div>
                     </div>
                 </div>
@@ -901,11 +1030,10 @@
                             <div class="current-images">${existingImagesHTML || '<p class="text-muted">No images</p>'}</div>
                         </div>
                         <div class="col-md-12 mb-2">
-                            <label class="form-label">Add New Variant Images</label>
-                            <input type="file" class="form-control variant-image-input" 
-                                   name="variant_images_${variantData.size_id || variantIndex}_${variantData.color_id || variantIndex}_0" 
-                                   multiple accept="image/*">
-                            <div class="variant-images-preview" data-variant-index="${variantIndex}"></div>
+                            <label class="form-label">Add New Variant Image URLs</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
+                            <small class="text-muted">Add new image URLs for this variant</small>
                         </div>
                     </div>
                 </div>
@@ -926,6 +1054,17 @@
                 const salePriceInDollar = $card.find('.variant-sale-price-dollar').val();
                 const url = $card.find('.variant-url').val();
                 const status = $card.find('.variant-status').is(':checked');
+                
+                // Collect variant image URLs
+                const variantIndex = $card.data('variant-index');
+                const imageUrls = [];
+                $(`.variant-image-urls-container[data-variant-index="${variantIndex}"] .variant-image-url-input`).each(function() {
+                    const imgUrl = $(this).val().trim();
+                    if (imgUrl) {
+                        imageUrls.push(imgUrl);
+                    }
+                });
+                
                 const deleteImages = [];
                 $card.find('.variant-delete-image:checked').each(function() {
                     deleteImages.push($(this).val());
@@ -940,6 +1079,7 @@
                     price_in_dolor: priceInDolor || null,
                     sale_price_in_dollar: salePriceInDollar || null,
                     url: url || null,
+                    image_urls: imageUrls.join('\\n'),
                     status: status,
                     delete_images: deleteImages,
                     images: [0] // Placeholder for image indices
@@ -975,39 +1115,16 @@
         });
 
         // Update variants data on change
-        $(document).on('change', '.variant-size, .variant-color, .variant-mrp, .variant-sale-price, .variant-price-dolor, .variant-sale-price-dollar, .variant-status, .variant-delete-image', function() {
+        $(document).on('change input', '.variant-size, .variant-color, .variant-mrp, .variant-sale-price, .variant-price-dolor, .variant-sale-price-dollar, .variant-url, .variant-status, .variant-delete-image, .variant-image-url-input', function() {
             const $card = $(this).closest('.variant-card');
             const sizeId = $card.find('.variant-size').val() || $card.data('variant-index');
             const colorId = $card.find('.variant-color').val() || $card.data('variant-index');
             const variantIndex = $card.data('variant-index');
             
-            // Update file input name to match backend expectation
-            $card.find('.variant-image-input').attr('name', `variant_images_${sizeId}_${colorId}_0`);
-            
             if ($(this).closest('#variantsContainer').length) {
                 updateVariantsData('#variantsContainer', '#variants_data');
             } else if ($(this).closest('#editVariantsContainer').length) {
                 updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-            }
-        });
-
-        // Variant image preview
-        $(document).on('change', '.variant-image-input', function() {
-            const files = this.files;
-            const previewContainer = $(this).siblings('.variant-images-preview');
-            previewContainer.empty();
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                if (file.type.match('image.*')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const preview = $('<div class="image-preview">');
-                        preview.html(`<img src="${e.target.result}" alt="Preview">`);
-                        previewContainer.append(preview);
-                    };
-                    reader.readAsDataURL(file);
-                }
             }
         });
 
@@ -1235,10 +1352,11 @@
                     if (response.images && response.images.length > 0) {
                         response.images.forEach(function(image) {
                             var imageHtml = `
-                                <div class="current-image">
-                                    <img src="${image.url}" alt="Product Image">
+                                <div class="image-url-card">
+                                    <img class="image-url-preview" src="${image.url}" alt="Product Image">
+                                    <input type="url" class="form-control" value="${image.url}" readonly>
                                     <input type="checkbox" class="delete-checkbox" name="delete_images" value="${image.id}">
-                                    <small class="text-muted d-block">Delete</small>
+                                    <label class="ms-2">Delete</label>
                                 </div>
                             `;
                             currentImagesContainer.append(imageHtml);
@@ -1246,6 +1364,10 @@
                     } else {
                         currentImagesContainer.html('<p class="text-muted">No images</p>');
                     }
+                    
+                    // Clear and reset edit image URLs container
+                    $('#editImageUrlsContainer').empty();
+                    editImageUrlCounter = 0;
                     
                     // Load variants
                     $('#editVariantsContainer').empty();

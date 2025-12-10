@@ -1729,8 +1729,8 @@ class ProductCategoryListView(View):
 class ProductCategoryCreateView(View):
     def post(self, request):
         name = request.POST.get('name')
-        status = 'status' in request.POST  # Checkbox
-        image_file = request.FILES.get('image')
+        status = 'status' in request.POST
+        image_url = request.POST.get('image_url', '').strip()
 
         # Validation
         if not name:
@@ -1744,32 +1744,9 @@ class ProductCategoryCreateView(View):
         try:
             category = product_category.objects.create(
                 name=name,
-                status=status
+                status=status,
+                image_url=image_url if image_url else None
             )
-
-            # Handle optional category image (single image)
-            if image_file:
-                # Basic validation similar to other uploads
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if image_file.content_type not in allowed_types:
-                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
-                    return redirect('product_category_list')
-
-                if image_file.size > 5 * 1024 * 1024:  # 5MB
-                    messages.error(request, "Image too large. Maximum size is 5MB.")
-                    return redirect('product_category_list')
-
-                # Generate unique filename
-                ext = os.path.splitext(image_file.name)[1].lstrip(".")
-                unique_filename = generate_unique_filename(f"category_{category.id}", ext)
-                file_path = os.path.join("category_images", unique_filename)
-
-                # Save file
-                default_storage.save(file_path, image_file)
-
-                # Attach to category and save
-                category.image = file_path
-                category.save()
 
             messages.success(request, "Product category created successfully")
 
@@ -1786,7 +1763,7 @@ class ProductCategoryEditView(View):
             'id': category.id,
             'name': category.name,
             'status': category.status,
-            'image_url': category.image.url if category.image else None,
+            'image_url': category.image_url if category.image_url else None,
             'created_at': category.created_at.strftime('%Y-%m-%d %H:%M') if category.created_at else None,
             'updated_at': category.updated_at.strftime('%Y-%m-%d %H:%M') if category.updated_at else None
         })
@@ -1796,7 +1773,7 @@ class ProductCategoryEditView(View):
 
         name = request.POST.get('name')
         status = 'status' in request.POST
-        image_file = request.FILES.get('image')
+        image_url = request.POST.get('image_url', '').strip()
         remove_image = request.POST.get('remove_image') == 'on'
 
         # Validation
@@ -1813,40 +1790,11 @@ class ProductCategoryEditView(View):
             category.name = name
             category.status = status
 
-            # Handle new image upload (replace existing) - priority over remove_image
-            if image_file:
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if image_file.content_type not in allowed_types:
-                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
-                    return redirect('product_category_list')
-
-                if image_file.size > 5 * 1024 * 1024:
-                    messages.error(request, "Image too large. Maximum size is 5MB.")
-                    return redirect('product_category_list')
-
-                # Always delete old file if exists when new image is provided
-                if category.image:
-                    try:
-                        if default_storage.exists(category.image.name):
-                            default_storage.delete(category.image.name)
-                    except Exception:
-                        pass
-
-                # Save new file
-                ext = os.path.splitext(image_file.name)[1].lstrip(".")
-                unique_filename = generate_unique_filename(f"category_{category.id}", ext)
-                file_path = os.path.join("category_images", unique_filename)
-                default_storage.save(file_path, image_file)
-                category.image = file_path
-            # Handle image removal only if no new image is provided
-            elif remove_image and category.image:
-                # Delete existing file from storage
-                try:
-                    if default_storage.exists(category.image.name):
-                        default_storage.delete(category.image.name)
-                except Exception:
-                    pass
-                category.image = None
+            # Handle image URL
+            if image_url:
+                category.image_url = image_url
+            elif remove_image:
+                category.image_url = None
 
             category.save()
             messages.success(request, "Product category updated successfully")
@@ -1914,7 +1862,7 @@ class ProductCreateView(View):
         url = request.POST.get('url')
         youtube_url = request.POST.get('youtube_url')
         status = 'status' in request.POST
-        image_files = request.FILES.getlist('images')
+        image_urls = request.POST.get('image_urls', '')
         
         # Variant data
         variants_data = request.POST.get('variants_data', '[]')
@@ -1948,31 +1896,19 @@ class ProductCreateView(View):
                     status=status
                 )
 
-                # Handle common images (images without variant)
-                for image_file in image_files:
-                    if image_file:
-                        # Validate file type
-                        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                        if image_file.content_type not in allowed_types:
-                            continue
-                        
-                        if image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                            continue
-
-                        # Generate unique filename
-                        ext = os.path.splitext(image_file.name)[1]
-                        unique_filename = generate_unique_filename(f"product_{product_obj.id}", ext.lstrip("."))
-                        file_path = os.path.join("product_images", unique_filename)
-                        
-                        # Save file
-                        default_storage.save(file_path, image_file)
-                        
-                        # Create common product image (no variant)
-                        product_image.objects.create(
-                            product=product_obj,
-                            variant=None,
-                            image=file_path
-                        )
+                # Handle common images (images without variant) - now from URLs
+                if image_urls:
+                    # Split URLs by newline or comma
+                    urls_list = [u.strip() for u in image_urls.replace(',', '\n').split('\n') if u.strip()]
+                    for idx, img_url in enumerate(urls_list):
+                        if img_url:
+                            # Create common product image (no variant)
+                            product_image.objects.create(
+                                product=product_obj,
+                                variant=None,
+                                image_url=img_url,
+                                is_primary=(idx == 0)
+                            )
 
                 # Handle variants
                 for variant_data in variants_json:
@@ -2012,35 +1948,19 @@ class ProductCreateView(View):
                         variant_obj.status = variant_status
                         variant_obj.save()
                     
-                    # Handle variant-specific images
-                    for img_index in variant_images:
-                        img_key = f'variant_images_{size_id}_{color_id}_{img_index}'
-                        variant_image_files = request.FILES.getlist(img_key)
-                        
-                        for variant_image_file in variant_image_files:
-                            if variant_image_file:
-                                # Validate file type
-                                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                                if variant_image_file.content_type not in allowed_types:
-                                    continue
-                                
-                                if variant_image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                                    continue
-
-                                # Generate unique filename
-                                ext = os.path.splitext(variant_image_file.name)[1]
-                                unique_filename = generate_unique_filename(f"product_{product_obj.id}_variant_{variant_obj.id}", ext.lstrip("."))
-                                file_path = os.path.join("product_images", unique_filename)
-                                
-                                # Save file
-                                default_storage.save(file_path, variant_image_file)
-                                
+                    # Handle variant-specific images from URLs
+                    variant_image_urls = variant_data.get('image_urls', '')
+                    if variant_image_urls:
+                        # Split URLs by newline or comma
+                        urls_list = [u.strip() for u in variant_image_urls.replace(',', '\n').split('\n') if u.strip()]
+                        for idx, img_url in enumerate(urls_list):
+                            if img_url:
                                 # Create variant-specific image
                                 product_image.objects.create(
                                     product=product_obj,
                                     variant=variant_obj,
-                                    image=file_path,
-                                    is_primary=(img_index == 0)  # First image is primary
+                                    image_url=img_url,
+                                    is_primary=(idx == 0)  # First image is primary
                                 )
 
                 messages.success(request, "Product created successfully")
@@ -2063,8 +1983,7 @@ class ProductEditView(View):
             for img in variant.images.all():
                 variant_images.append({
                     'id': img.id,
-                    'url': img.image.url if img.image else None,
-                    'name': os.path.basename(img.image.name) if img.image else None,
+                    'url': img.image_url if img.image_url else None,
                     'is_primary': img.is_primary
                 })
             
@@ -2099,8 +2018,7 @@ class ProductEditView(View):
             'images': [
                 {
                     'id': img.id,
-                    'url': img.image.url if img.image else None,
-                    'name': os.path.basename(img.image.name) if img.image else None
+                    'url': img.image_url if img.image_url else None
                 } for img in images
             ],
             'variants': variants_data
@@ -2119,7 +2037,7 @@ class ProductEditView(View):
         url = request.POST.get('url')
         youtube_url = request.POST.get('youtube_url')
         status = 'status' in request.POST
-        new_images = request.FILES.getlist('new_images')
+        new_image_urls = request.POST.get('new_image_urls', '')
         delete_images = request.POST.getlist('delete_images')
         
         # Variant data
@@ -2157,38 +2075,25 @@ class ProductEditView(View):
                 for image_id in delete_images:
                     try:
                         img = product_image.objects.get(id=image_id, product=product_obj, variant__isnull=True)
-                        if img.image:
-                            if default_storage.exists(img.image.name):
-                                default_storage.delete(img.image.name)
                         img.delete()
                     except product_image.DoesNotExist:
                         continue
 
-                # Add new common images
-                for image_file in new_images:
-                    if image_file:
-                        # Validate file type
-                        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                        if image_file.content_type not in allowed_types:
-                            continue
-                        
-                        if image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                            continue
-
-                        # Generate unique filename
-                        ext = os.path.splitext(image_file.name)[1]
-                        unique_filename = generate_unique_filename(f"product_{product_obj.id}", ext.lstrip("."))
-                        file_path = os.path.join("product_images", unique_filename)
-                        
-                        # Save file
-                        default_storage.save(file_path, image_file)
-                        
-                        # Create common product image (no variant)
-                        product_image.objects.create(
-                            product=product_obj,
-                            variant=None,
-                            image=file_path
-                        )
+                # Add new common images from URLs
+                if new_image_urls:
+                    # Split URLs by newline or comma
+                    urls_list = [u.strip() for u in new_image_urls.replace(',', '\n').split('\n') if u.strip()]
+                    # Get current max order to maintain sequence
+                    existing_count = product_image.objects.filter(product=product_obj, variant__isnull=True).count()
+                    for idx, img_url in enumerate(urls_list):
+                        if img_url:
+                            # Create common product image (no variant)
+                            product_image.objects.create(
+                                product=product_obj,
+                                variant=None,
+                                image_url=img_url,
+                                is_primary=(existing_count == 0 and idx == 0)
+                            )
 
                 # Handle variants
                 existing_variant_ids = set()
@@ -2211,9 +2116,6 @@ class ProductEditView(View):
                     for img_id in delete_variant_images:
                         try:
                             img = product_image.objects.get(id=img_id, product=product_obj)
-                            if img.image:
-                                if default_storage.exists(img.image.name):
-                                    default_storage.delete(img.image.name)
                             img.delete()
                         except product_image.DoesNotExist:
                             continue
@@ -2269,35 +2171,21 @@ class ProductEditView(View):
                             variant_obj.save()
                         existing_variant_ids.add(variant_obj.id)
                     
-                    # Handle variant-specific images
-                    for img_index in variant_images:
-                        img_key = f'variant_images_{size_id}_{color_id}_{img_index}'
-                        variant_image_files = request.FILES.getlist(img_key)
-                        
-                        for variant_image_file in variant_image_files:
-                            if variant_image_file:
-                                # Validate file type
-                                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                                if variant_image_file.content_type not in allowed_types:
-                                    continue
-                                
-                                if variant_image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                                    continue
-
-                                # Generate unique filename
-                                ext = os.path.splitext(variant_image_file.name)[1]
-                                unique_filename = generate_unique_filename(f"product_{product_obj.id}_variant_{variant_obj.id}", ext.lstrip("."))
-                                file_path = os.path.join("product_images", unique_filename)
-                                
-                                # Save file
-                                default_storage.save(file_path, variant_image_file)
-                                
+                    # Handle variant-specific images from URLs
+                    variant_image_urls = variant_data.get('image_urls', '')
+                    if variant_image_urls:
+                        # Split URLs by newline or comma
+                        urls_list = [u.strip() for u in variant_image_urls.replace(',', '\n').split('\n') if u.strip()]
+                        # Get existing count to determine if first should be primary
+                        existing_variant_images = product_image.objects.filter(product=product_obj, variant=variant_obj).count()
+                        for idx, img_url in enumerate(urls_list):
+                            if img_url:
                                 # Create variant-specific image
                                 product_image.objects.create(
                                     product=product_obj,
                                     variant=variant_obj,
-                                    image=file_path,
-                                    is_primary=(img_index == 0)
+                                    image_url=img_url,
+                                    is_primary=(existing_variant_images == 0 and idx == 0)
                                 )
                 
                 # Delete variants that are not in the updated list
@@ -2508,7 +2396,7 @@ class DashboardBannerCreateView(View):
         title = request.POST.get('title')
         title_1 = request.POST.get('title_1')
         title_2 = request.POST.get('title_2')
-        image_file = request.FILES.get('image')
+        image_url = request.POST.get('image_url', '').strip()
 
         # Validation
         if not title:
@@ -2516,34 +2404,12 @@ class DashboardBannerCreateView(View):
             return redirect('dashboard_banner_list')
 
         try:
-            banner = dashboard_banner.objects.create(title=title)
-            banner.title_1 = title_1
-            banner.title_2 = title_2
-            banner.save()
-
-            # Handle optional banner image
-            if image_file:
-                # Basic validation
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if image_file.content_type not in allowed_types:
-                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
-                    return redirect('dashboard_banner_list')
-
-                if image_file.size > 5 * 1024 * 1024:  # 5MB
-                    messages.error(request, "Image too large. Maximum size is 5MB.")
-                    return redirect('dashboard_banner_list')
-
-                # Generate unique filename
-                ext = os.path.splitext(image_file.name)[1].lstrip(".")
-                unique_filename = generate_unique_filename(f"banner_{banner.id}", ext)
-                file_path = os.path.join("dashboard_banner", unique_filename)
-
-                # Save file
-                default_storage.save(file_path, image_file)
-
-                # Attach to banner and save
-                banner.image = file_path
-                banner.save()
+            banner = dashboard_banner.objects.create(
+                title=title,
+                title_1=title_1,
+                title_2=title_2,
+                image_url=image_url if image_url else None
+            )
 
             messages.success(request, "Dashboard banner created successfully")
 
@@ -2561,7 +2427,7 @@ class DashboardBannerEditView(View):
             'title': banner.title,
             'title_1': banner.title_1,
             'title_2': banner.title_2,
-            'image_url': banner.image.url if banner.image else None,
+            'image_url': banner.image_url if banner.image_url else None,
             'created_at': banner.created_at.strftime('%Y-%m-%d %H:%M') if banner.created_at else None,
             'updated_at': banner.updated_at.strftime('%Y-%m-%d %H:%M') if banner.updated_at else None
         })
@@ -2572,7 +2438,7 @@ class DashboardBannerEditView(View):
         title = request.POST.get('title')
         title_1 = request.POST.get('title_1')
         title_2 = request.POST.get('title_2')
-        image_file = request.FILES.get('image')
+        image_url = request.POST.get('image_url', '').strip()
         remove_image = request.POST.get('remove_image') == 'on'
 
         # Validation
@@ -2585,40 +2451,11 @@ class DashboardBannerEditView(View):
             banner.title_1 = title_1
             banner.title_2 = title_2
 
-            # Handle new image upload (replace existing) - priority over remove_image
-            if image_file:
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if image_file.content_type not in allowed_types:
-                    messages.error(request, "Invalid image type. Only JPEG, PNG, GIF and WEBP are allowed.")
-                    return redirect('dashboard_banner_list')
-
-                if image_file.size > 5 * 1024 * 1024:
-                    messages.error(request, "Image too large. Maximum size is 5MB.")
-                    return redirect('dashboard_banner_list')
-
-                # Always delete old file if exists when new image is provided
-                if banner.image:
-                    try:
-                        if default_storage.exists(banner.image.name):
-                            default_storage.delete(banner.image.name)
-                    except Exception:
-                        pass
-
-                # Save new file
-                ext = os.path.splitext(image_file.name)[1].lstrip(".")
-                unique_filename = generate_unique_filename(f"banner_{banner.id}", ext)
-                file_path = os.path.join("dashboard_banner", unique_filename)
-                default_storage.save(file_path, image_file)
-                banner.image = file_path
-            # Handle image removal only if no new image is provided
-            elif remove_image and banner.image:
-                # Delete existing file from storage
-                try:
-                    if default_storage.exists(banner.image.name):
-                        default_storage.delete(banner.image.name)
-                except Exception:
-                    pass
-                banner.image = None
+            # Handle image URL
+            if image_url:
+                banner.image_url = image_url
+            elif remove_image:
+                banner.image_url = None
 
             banner.save()
             messages.success(request, "Dashboard banner updated successfully")
@@ -2632,14 +2469,6 @@ class DashboardBannerDeleteView(View):
     def post(self, request, pk):
         banner = get_object_or_404(dashboard_banner, pk=pk)
         try:
-            # Delete associated image file if exists
-            if banner.image:
-                try:
-                    if default_storage.exists(banner.image.name):
-                        default_storage.delete(banner.image.name)
-                except Exception:
-                    pass
-
             banner.delete()
             messages.success(request, "Dashboard banner deleted successfully")
         except Exception as e:

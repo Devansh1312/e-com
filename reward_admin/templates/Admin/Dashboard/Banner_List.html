@@ -50,8 +50,8 @@
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
                                         <td>
-                                            {% if banner.image %}
-                                                <img src="{{ banner.image.url }}" alt="{{ banner.title }}" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                            {% if banner.image_url %}
+                                                <img src="{{ banner.image_url }}" alt="{{ banner.title }}" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.onerror=null; this.src='{% static "assets/images/product/1.jpg" %}';">
                                             {% else %}
                                                 <span class="text-muted small">No Image</span>
                                             {% endif %}
@@ -74,7 +74,7 @@
                                                             data-banner-title="{{ banner.title }}"
                                                             data-banner-title1="{{ banner.title_1 }}"
                                                             data-banner-title2="{{ banner.title_2 }}"
-                                                            data-banner-image-url="{% if banner.image %}{{ banner.image.url }}{% endif %}"> Edit </a>
+                                                            data-banner-image-url="{% if banner.image_url %}{{ banner.image_url }}{% endif %}"> Edit </a>
                                                         </li>
                                                         <li style="padding: 8px 12px; border-top: 1px solid #eee;">
                                                             <a style="font-size: small;" href="#" data-bs-toggle="modal" data-bs-target="#deleteBannerModal" data-banner-id="{{ banner.id }}">
@@ -103,7 +103,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="{% url 'dashboard_banner_create' %}" id="addBannerForm" enctype="multipart/form-data">
+                        <form method="post" action="{% url 'dashboard_banner_create' %}" id="addBannerForm">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-12 mb-3">
@@ -120,9 +120,9 @@
                                     <textarea class="form-control" id="title_2" name="title_2" placeholder="Enter title 2" rows="2"></textarea>
                                 </div>
                                 <div class="col-md-12 mb-3">
-                                    <label for="image" class="form-label">Banner Image</label>
-                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                    <small class="text-muted">Recommended aspect ratio for banners. Max 5MB.</small>
+                                    <label for="image_url" class="form-label">Banner Image URL</label>
+                                    <input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://example.com/banner.jpg">
+                                    <small class="text-muted">Enter banner image URL. Recommended aspect ratio for banners.</small>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">Add Banner</button>
@@ -143,7 +143,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" id="editBannerForm" enctype="multipart/form-data">
+                        <form method="post" id="editBannerForm">
                             {% csrf_token %}
                             <input type="hidden" id="bannerId" name="id">
                             <div class="row">
@@ -163,11 +163,11 @@
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Current Image</label>
                                     <div class="mb-2">
-                                        <img id="edit_banner_image_preview" src="" alt="Banner Image" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; display: none;">
+                                        <img id="edit_banner_image_preview" src="" alt="Banner Image" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; display: none;" onerror="this.style.display='none'; document.getElementById('edit_no_image_text').style.display='inline';">
                                         <span id="edit_no_image_text" class="text-muted small">No Image</span>
                                     </div>
-                                    <label for="edit_image" class="form-label">Change Image</label>
-                                    <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
+                                    <label for="edit_image_url" class="form-label">Image URL</label>
+                                    <input type="text" class="form-control" id="edit_image_url" name="image_url" placeholder="https://example.com/banner.jpg">
                                     <div class="form-check mt-2">
                                         <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
                                         <label class="form-check-label" for="remove_image">Remove existing image</label>
@@ -275,6 +275,7 @@
             form.find('#edit_title').val(title || "");
             form.find('#edit_title_1').val(title1 || "");
             form.find('#edit_title_2').val(title2 || "");
+            form.find('#edit_image_url').val(imageUrl || "");
             
             // Set image preview
             var imgEl = $('#edit_banner_image_preview');
