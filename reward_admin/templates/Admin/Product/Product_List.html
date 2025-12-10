@@ -274,9 +274,11 @@
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-wrap: wrap;
     }
     .image-url-card input {
         flex: 1;
+        min-width: 200px;
     }
     .image-url-preview {
         width: 60px;
@@ -284,6 +286,97 @@
         border-radius: 4px;
         object-fit: cover;
         border: 1px solid #ddd;
+        flex-shrink: 0;
+    }
+    .image-url-card .btn {
+        flex-shrink: 0;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        #viewProductModal .modal-dialog {
+            margin: 0.5rem;
+        }
+        
+        #viewProductModal .modal-body {
+            padding: 15px;
+        }
+        
+        #viewProductModal h4 {
+            font-size: 20px;
+        }
+        
+        #viewProductModal h6 {
+            font-size: 14px;
+        }
+        
+        #viewProductModal .card-body {
+            padding: 15px;
+        }
+        
+        #viewProductModal .table td {
+            padding: 8px 4px;
+            font-size: 13px;
+        }
+        
+        .image-url-card {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .image-url-card input {
+            width: 100%;
+            min-width: auto;
+        }
+        
+        .image-url-preview {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+        }
+        
+        .variant-card .row {
+            margin: 0;
+        }
+        
+        .variant-card .col-md-3,
+        .variant-card .col-md-4,
+        .variant-card .col-md-6,
+        .variant-card .col-md-12 {
+            padding: 0 5px;
+        }
+        
+        .modal-lg {
+            max-width: 95%;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .image-preview-container,
+        .current-images,
+        .variant-images-preview {
+            gap: 5px;
+        }
+        
+        .image-preview,
+        .current-image {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        #viewProductModal .modal-header .modal-title {
+            font-size: 18px;
+        }
     }
 </style>
 <!-- Plugins css Ends-->
@@ -442,7 +535,9 @@
                                 </div>
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Common Product Image URLs</label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="addImageUrlBtn">+ Add Image URL</button>
+                                    <div class="d-flex justify-content-end mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="addImageUrlBtn">+ Add Image URL</button>
+                                    </div>
                                     <div id="imageUrlsContainer"></div>
                                     <input type="hidden" id="image_urls_data" name="image_urls">
                                     <small class="text-muted">Add image URLs. These are common images shared across all variants.</small>
@@ -451,8 +546,10 @@
                                 <!-- Variants Section -->
                                 <div class="col-md-12 mb-3">
                                     <hr>
-                                    <h6>Product Variants (Size & Color)</h6>
-                                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="addVariantBtn">+ Add Variant</button>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Product Variants (Size & Color)</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="addVariantBtn">+ Add Variant</button>
+                                    </div>
                                     <div id="variantsContainer"></div>
                                     <input type="hidden" id="variants_data" name="variants_data" value="[]">
                                 </div>
@@ -537,7 +634,9 @@
                                 </div>
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">Add New Common Image URLs</label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="addEditImageUrlBtn">+ Add Image URL</button>
+                                    <div class="d-flex justify-content-end mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="addEditImageUrlBtn">+ Add Image URL</button>
+                                    </div>
                                     <div id="editImageUrlsContainer"></div>
                                     <input type="hidden" id="new_image_urls_data" name="new_image_urls">
                                     <small class="text-muted">Add new image URLs. These are common images shared across all variants.</small>
@@ -546,8 +645,10 @@
                                 <!-- Variants Section for Edit -->
                                 <div class="col-md-12 mb-3">
                                     <hr>
-                                    <h6>Product Variants (Size & Color)</h6>
-                                    <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="addEditVariantBtn">+ Add Variant</button>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Product Variants (Size & Color)</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="addEditVariantBtn">+ Add Variant</button>
+                                    </div>
                                     <div id="editVariantsContainer"></div>
                                     <input type="hidden" id="edit_variants_data" name="variants_data" value="[]">
                                 </div>
@@ -767,9 +868,9 @@
             const urlIndex = index !== null ? index : imageUrlCounter++;
             return `
                 <div class="image-url-card" data-url-index="${urlIndex}">
+                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
                     <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
                     <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
                 </div>
             `;
         }
@@ -779,9 +880,9 @@
             const urlIndex = index !== null ? index : editImageUrlCounter++;
             return `
                 <div class="image-url-card" data-url-index="${urlIndex}">
+                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
                     <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
                     <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
                 </div>
             `;
         }
@@ -790,9 +891,9 @@
         function createVariantImageUrlCard(url = '') {
             return `
                 <div class="image-url-card variant-image-url-card">
+                    <button type="button" class="btn btn-sm btn-danger remove-variant-image-url">Remove</button>
                     <input type="url" class="form-control variant-image-url-input" placeholder="https://example.com/variant-image.jpg" value="${url}">
                     <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                    <button type="button" class="btn btn-sm btn-danger remove-variant-image-url">Remove</button>
                 </div>
             `;
         }
@@ -942,7 +1043,9 @@
                         </div>
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Variant Image URLs</label>
-                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            <div class="d-flex justify-content-end mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            </div>
                             <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
                             <small class="text-muted">Add image URLs specific to this variant</small>
                         </div>
@@ -1031,7 +1134,9 @@
                         </div>
                         <div class="col-md-12 mb-2">
                             <label class="form-label">Add New Variant Image URLs</label>
-                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            <div class="d-flex justify-content-end mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                            </div>
                             <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
                             <small class="text-muted">Add new image URLs for this variant</small>
                         </div>
