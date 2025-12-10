@@ -831,9 +831,7 @@ class DashboardAPI(APIView):
 
             categories_data = []
             for category in categories_qs:
-                image_url = None
-                if getattr(category, 'image', None):
-                    image_url = _build_absolute_media_url(request, category.image.url)
+                image_url = category.image_url if category.image_url else None
 
                 categories_data.append({
                     'id': category.id,
@@ -1229,9 +1227,7 @@ class ProductCategoryWiseAPIView(APIView):
             # Get all products without pagination
             product_data = [serialize_product_record(prod, request, request.user if request.user.is_authenticated else None) for prod in products_qs]
 
-            category_image = None
-            if getattr(category, 'image', None):
-                category_image = _build_absolute_media_url(request, category.image.url)
+            category_image = category.image_url if category.image_url else None
 
             return Response({
                 'status': 1,
