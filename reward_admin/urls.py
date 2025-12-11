@@ -9,14 +9,12 @@ urlpatterns = [
     # Redirect root to admin login
     path('', lambda request: redirect('adminlogin')),
 
-
     # -------- Authentication --------
     path('adminlogin/', LoginFormView, name="adminlogin"),
     path('logout/', logout_view, name='logout'),
     
     # -------- Dashboards --------
     path('Dashboard/', Dashboard.as_view(), name="view_dashboard"),
-
 
     # -------- Profile --------
     path('System-Settings/', System_Settings.as_view(), name="System_Settings"),
@@ -30,19 +28,10 @@ urlpatterns = [
     path('get-states/', get_states, name='get_states'),
     path('get-cities/', get_cities, name='get_cities'),
 
-   
-    # -------- User Roles --------
-    path('user-roles/', RoleView.as_view(), name='role_list'),
-    # path('user-role/create/', RoleCreateView.as_view(), name='role_create'),
-    path('user-role/edit/<int:role_id>/', RoleEditView.as_view(), name='role_edit'),
-    # path('user-role/delete/<int:role_id>/', RoleDeleteView.as_view(), name='role_delete'),
-
     # Customer URLs
     path('customer-users/', CustomerUserListView.as_view(), name='customer_user_list'),
     path('customer/detail/<int:pk>/', CustomerDetailView.as_view(), name='customer_detail'),
     path('customer/toggle-status/<int:pk>/', CustomerToggleStatusView.as_view(), name='customer_toggle_status'),
-
-
 
     # -------- FAQ --------
     path('faq/', FAQView.as_view(), name='faq_list'),

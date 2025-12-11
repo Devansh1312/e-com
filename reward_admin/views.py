@@ -142,9 +142,6 @@ def LoginFormView(request):
                             request.session.set_expiry(1209600)
                         messages.success(request, "Login Successful")
 
-                        # ✅ Important: redirect immediately after successful login
-                        # so that the browser navigates to the dashboard without
-                        # needing a manual reload.
                         return redirect('view_dashboard')
                     
                     else:
@@ -163,7 +160,6 @@ def LoginFormView(request):
             for error in errors.values():
                 messages.error(request, error)
 
-    # Context for template - we'll pass empty values or previously submitted values
     context = {
         'phone_value': request.POST.get('phone', ''),
         'password_value': request.POST.get('password', ''),
@@ -171,7 +167,6 @@ def LoginFormView(request):
     }
     
     return render(request, "Admin_Login.html", context)
-# Authenticate username, email or phone
 def authenticate_username_email_or_phone(login_input, password):
     try:
         if login_input.isdigit():
@@ -179,9 +174,7 @@ def authenticate_username_email_or_phone(login_input, password):
         elif '@' in login_input:
             user = User.objects.get(email=login_input)
         else:
-            # Try username first, then membership_id
-            user = User.objects.filter(username=login_input).first() or \
-                   User.objects.get(membership_id=login_input)
+            user = User.objects.filter(username=login_input).first() 
     except User.DoesNotExist:
         return None
     except User.MultipleObjectsReturned:
@@ -201,9 +194,6 @@ class Dashboard(LoginRequiredMixin, View):
         if not request.user.is_authenticated:
             return redirect('adminlogin')
 
-        # ===============================
-        # HIGH LEVEL USER STATISTICS
-        # ===============================
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
         inactive_users = total_users - active_users
@@ -222,9 +212,6 @@ class Dashboard(LoginRequiredMixin, View):
             else 0
         )
 
-        # ===============================
-        # PRODUCT & INVENTORY STATISTICS
-        # ===============================
         total_products = product.objects.count()
         active_products = product.objects.filter(status=True).count()
         inactive_products = total_products - active_products
@@ -233,9 +220,6 @@ class Dashboard(LoginRequiredMixin, View):
         total_variants = product_variant.objects.count()
         total_images = product_image.objects.count()
 
-        # ===============================
-        # ENGAGEMENT STATISTICS
-        # ===============================
         total_reviews = customer_review.objects.count()
         average_rating = (
             customer_review.objects.aggregate(avg_rating=Avg("rating"))["avg_rating"]
@@ -244,10 +228,7 @@ class Dashboard(LoginRequiredMixin, View):
         total_wishlist_items = wishlist.objects.count()
         total_cart_items = cart.objects.count()
 
-        # ===============================
-        # ANALYTICS – FOR CHARTS
-        # ===============================
-        # Products per category
+        # Product categories distribution
         category_qs = (
             product.objects.values("category__name")
             .annotate(total=Count("id"))
@@ -473,9 +454,7 @@ def change_password_ajax(request):
             user = request.user
             user.set_password(form.cleaned_data['new_password1'])
             user.save()
-            # Log the user out after password change
             logout(request)
-            # Add a success message for the user (optional)
             messages.success(request, "Your password has been successfully updated! Please log in with your new credentials.")
             
             # Return the success response with a redirect URL
@@ -770,69 +749,6 @@ def api_get_cities(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
          
-################################################################# Role CRUD Views ###################################################
-
-# User Role List Module  
-@method_decorator(login_required_with_role_check, name="dispatch")
-class RoleView(LoginRequiredMixin, View):
-    template_name = "Admin/Permissions/User_Role.html"
-
-    def get(self, request):
-        roles = Role.objects.all()
-        return render(
-            request,
-            self.template_name,
-            {
-                "roles": roles,
-                "breadcrumb": {"child": "Role List"},
-            },
-        )
-
-# # Role Create Views
-# class RoleCreateView(LoginRequiredMixin, View):
-#     def post(self, request):
-#         name = request.POST.get("name")
-
-#         if not name:
-#             messages.error(request, "Name is required.")
-#             return redirect("role_list")
-
-#         try:
-#             Role.objects.create(
-#                 name=name,
-#             )
-#             messages.success(request, "Role added successfully.")
-#         except Exception as e:
-#             messages.error(request, f"Error creating role: {str(e)}")
-        
-#         return redirect("role_list")
-
-# Role Edit Views
-@method_decorator(login_required_with_role_check, name="dispatch")
-class RoleEditView(LoginRequiredMixin, View):
-    def post(self, request, role_id):
-        role = get_object_or_404(Role, id=role_id)
-        role.name = request.POST.get("name")
-
-        try:
-            role.save()
-            messages.success(request, "Role updated successfully.")
-        except Exception as e:
-            messages.error(request, f"Error updating role: {str(e)}")
-        
-        return redirect("role_list")
-
-# Role Delete Views
-# class RoleDeleteView(LoginRequiredMixin, View):
-#     def post(self, request, role_id):
-#         role = get_object_or_404(Role, id=role_id)
-#         try:
-#             role.delete()
-#             messages.success(request, "Role deleted successfully.")
-#         except Exception as e:
-#             messages.error(request, f"Error deleting role: {str(e)}")
-#         return redirect("role_list")
-
 #################################################### Country List View API ##################################################
 @method_decorator(login_required_with_role_check, name="dispatch")
 class CountryListView(View):

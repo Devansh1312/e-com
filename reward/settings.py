@@ -17,10 +17,6 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-%c_edfhas+)*s2u6c0it-9+1qibinqr1f5zvp-**81dnl(q4fv'
 
@@ -28,8 +24,6 @@ SECRET_KEY = 'django-insecure-%c_edfhas+)*s2u6c0it-9+1qibinqr1f5zvp-**81dnl(q4fv
 DEBUG = False
 
 ALLOWED_HOSTS = ['*','kitchivo.pythonanywhere.com']
-
-
 
 # Application definition
 
@@ -85,28 +79,24 @@ AUTH_USER_MODEL = 'reward_admin.User'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'reward_admin.auth_backends.MembershipIDBackend',
 ]
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Database
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'ecom',  # Name of your database
+#         'NAME': 'ecom',
 #         'USER': 'root',
-#         'PASSWORD': '',
-#         'HOST': 'localhost',
+#         'PASSWORD': 'root',   # <-- Updated password
+#         'HOST': '127.0.0.1',  # Use 127.0.0.1 instead of localhost (important for MySQL)
 #         'PORT': '3306',
 #         'OPTIONS': {
-#             'charset': 'utf8mb4',  # Set charset to utf8mb4 to support emojis
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
+#             'charset': 'utf8mb4',  # For emojis + unicode
 #         }
 #     }
 # }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -121,8 +111,6 @@ DATABASES = {
         }
     }
 }
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -152,10 +140,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
 STATICFILES_DIRS=[
     BASE_DIR /'static',  # static files in the project root
@@ -172,9 +156,6 @@ STATIC_DOMAIN = 'https://kitchivo.pythonanywhere.com/static/'  # ✅ Add this li
 DOMAIN = 'https://kitchivo.pythonanywhere.com'  # ✅ Add this line if not already present
 
 LOGIN_URL = 'adminlogin'  # Using the URL name instead of path
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
