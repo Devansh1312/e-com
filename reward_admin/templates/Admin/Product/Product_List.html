@@ -720,785 +720,719 @@
 <script src="{% static 'assets/js/datatable/datatables/jquery.dataTables.min.js'%}"></script>
 <script src="{% static 'assets/js/datatable/datatables/datatable.custom.js'%}"></script>
 <script>
-    $(document).ready(function() {
-        // Function to validate form fields
-        function validateForm(form) {
-            let isValid = true;
-            
-            // Validate Name
-            const nameInput = form.find('#name, #edit_name');
-            const nameError = form.find('#name-error, #edit_name-error');
-            if (nameInput.val().trim() === '') {
-                nameInput.addClass('is-invalid');
-                nameError.text('Product name is required.');
-                isValid = false;
-            } else {
-                nameInput.removeClass('is-invalid');
-                nameError.text('');
-            }
-            
-            // Validate Category
-            const categoryInput = form.find('#category, #edit_category');
-            const categoryError = form.find('#category-error, #edit_category-error');
-            if (categoryInput.val() === '') {
-                categoryInput.addClass('is-invalid');
-                categoryError.text('Category is required.');
-                isValid = false;
-            } else {
-                categoryInput.removeClass('is-invalid');
-                categoryError.text('');
-            }
-            
-            return isValid;
+$(document).ready(function() {
+    // Function to validate form fields
+    function validateForm(form) {
+        let isValid = true;
+        
+        // Validate Name
+        const nameInput = form.find('#name, #edit_name');
+        const nameError = form.find('#name-error, #edit_name-error');
+        if (nameInput.val().trim() === '') {
+            nameInput.addClass('is-invalid');
+            nameError.text('Product name is required.');
+            isValid = false;
+        } else {
+            nameInput.removeClass('is-invalid');
+            nameError.text('');
         }
+        
+        // Validate Category
+        const categoryInput = form.find('#category, #edit_category');
+        const categoryError = form.find('#category-error, #edit_category-error');
+        if (categoryInput.val() === '') {
+            categoryInput.addClass('is-invalid');
+            categoryError.text('Category is required.');
+            isValid = false;
+        } else {
+            categoryInput.removeClass('is-invalid');
+            categoryError.text('');
+        }
+        
+        return isValid;
+    }
 
-        // Image preview functionality
-        function setupImagePreview(inputId, previewId) {
-            $(inputId).on('change', function() {
-                const files = this.files;
-                const previewContainer = $(previewId);
-                previewContainer.empty();
-                
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    if (file.type.match('image.*')) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            const preview = $('<div class="image-preview">');
-                            preview.html(`
-                                <img src="${e.target.result}" alt="Preview">
-                                <button type="button" class="remove-btn">&times;</button>
-                            `);
-                            previewContainer.append(preview);
-                            
-                            // Remove preview when X is clicked
-                            preview.find('.remove-btn').on('click', function() {
-                                preview.remove();
-                                // Remove the file from input
-                                const dt = new DataTransfer();
-                                const input = $(inputId)[0];
-                                for (let file of input.files) {
-                                    if (file !== files[i]) {
-                                        dt.items.add(file);
-                                    }
-                                }
-                                input.files = dt.files;
-                            });
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
+    // Clear validation errors when modal is closed
+    $('.modal').on('hidden.bs.modal', function() {
+        $(this).find('.is-invalid').removeClass('is-invalid');
+        $(this).find('.invalid-feedback').text('');
+        $(this).find('form')[0].reset();
+        $('#currentImages').empty();
+        $('#imageUrlsContainer').empty();
+        $('#editImageUrlsContainer').empty();
+        $('#variantsContainer').empty();
+        $('#editVariantsContainer').empty();
+        variantCounter = 0;
+        editVariantCounter = 0;
+        imageUrlCounter = 0;
+        editImageUrlCounter = 0;
+    });
+
+    // Clear validation when user starts typing
+    $('#name, #edit_name, #category, #edit_category').on('input change', function() {
+        $(this).removeClass('is-invalid');
+        $(this).siblings('.invalid-feedback').text('');
+    });
+
+    // Delete Product Modal
+    $('#deleteProductModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var productId = button.data('product-id');
+        $('#deleteProductForm').attr('action', "{% url 'product_delete' 0 %}".replace('0', productId));
+    });
+
+    // Toggle action menu
+    $(document).on('click', '.three-dots-menu', function(e) {
+        e.preventDefault();
+        var actionCard = $(this).next('.action-card');
+        $('.action-card').not(actionCard).hide();
+        actionCard.toggle();
+    });
+
+    // Hide action card if clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.action-menu-container').length) {
+            $('.action-card').hide();
+        }
+    });
+
+    // Variant Management Functions
+    let variantCounter = 0;
+    let editVariantCounter = 0;
+    let imageUrlCounter = 0;
+    let editImageUrlCounter = 0;
+
+    // Sizes and Colors data
+    const sizesData = [
+        {% for size in sizes %}
+        {id: {{ size.id }}, name: "{{ size.name }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const colorsData = [
+        {% for color in colors %}
+        {id: {{ color.id }}, name: "{{ color.name }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Function to create image URL input card (for Add Modal)
+    function createImageUrlCard(url = '', index = null) {
+        const urlIndex = index !== null ? index : imageUrlCounter++;
+        return `
+            <div class="image-url-card" data-url-index="${urlIndex}">
+                <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
+                <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
+                <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+            </div>
+        `;
+    }
+
+    // Function to create edit image URL input card (for Edit Modal)
+    function createEditImageUrlCard(url = '', index = null) {
+        const urlIndex = index !== null ? index : editImageUrlCounter++;
+        return `
+            <div class="image-url-card" data-url-index="${urlIndex}">
+                <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
+                <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
+                <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+            </div>
+        `;
+    }
+
+    // Function to create variant image URL input card
+    function createVariantImageUrlCard(url = '') {
+        return `
+            <div class="image-url-card variant-image-url-card">
+                <button type="button" class="btn btn-sm btn-danger remove-variant-image-url">Remove</button>
+                <input type="url" class="form-control variant-image-url-input" placeholder="https://example.com/variant-image.jpg" value="${url}">
+                <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
+            </div>
+        `;
+    }
+
+    // Update image preview when URL changes
+    $(document).on('input', '.image-url-input, .variant-image-url-input', function() {
+        const url = $(this).val().trim();
+        const $preview = $(this).siblings('.image-url-preview');
+        
+        if (url) {
+            $preview.attr('src', url).show();
+            $preview.on('error', function() {
+                $(this).attr('src', 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ffcccc\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23cc0000\' font-size=\'10\'%3EInvalid%3C/text%3E%3C/svg%3E');
             });
+        } else {
+            $preview.hide();
         }
+    });
 
-        // Initialize image previews
-        setupImagePreview('#images', '#imagePreview');
-        setupImagePreview('#edit_images', '#editImagePreview');
+    // Add common image URL (Add Modal)
+    $('#addImageUrlBtn').on('click', function() {
+        $('#imageUrlsContainer').append(createImageUrlCard());
+    });
 
-        // Add Product Form Validation
-        $('#addProductForm').on('submit', function(event) {
-            event.preventDefault();
-            if (validateForm($(this))) {
-                this.submit();
-            }
-        });
+    // Add common image URL (Edit Modal)
+    $('#addEditImageUrlBtn').on('click', function() {
+        $('#editImageUrlsContainer').append(createEditImageUrlCard());
+    });
 
-        // Edit Product Form Validation
-        $('#editProductForm').on('submit', function(event) {
-            event.preventDefault();
-            if (validateForm($(this))) {
-                this.submit();
-            }
-        });
+    // Remove common image URL
+    $(document).on('click', '.remove-image-url', function() {
+        $(this).closest('.image-url-card').remove();
+    });
 
-        // Clear validation errors when modal is closed
-        $('.modal').on('hidden.bs.modal', function() {
-            $(this).find('.is-invalid').removeClass('is-invalid');
-            $(this).find('.invalid-feedback').text('');
-            $(this).find('form')[0].reset();
-            $(this).find('.image-preview-container').empty();
-            $('#currentImages').empty();
-            $('#imageUrlsContainer').empty();
-            $('#editImageUrlsContainer').empty();
-            $('#variantsContainer').empty();
-            $('#editVariantsContainer').empty();
-            variantCounter = 0;
-            editVariantCounter = 0;
-            imageUrlCounter = 0;
-            editImageUrlCounter = 0;
-        });
+    // Add variant image URL
+    $(document).on('click', '.add-variant-image-url', function() {
+        const variantIndex = $(this).data('variant-index');
+        const container = $(`.variant-image-urls-container[data-variant-index="${variantIndex}"]`);
+        container.append(createVariantImageUrlCard());
+    });
 
-        // Clear validation when user starts typing
-        $('#name, #edit_name, #category, #edit_category').on('input change', function() {
-            $(this).removeClass('is-invalid');
-            $(this).siblings('.invalid-feedback').text('');
-        });
+    // Remove variant image URL
+    $(document).on('click', '.remove-variant-image-url', function() {
+        $(this).closest('.variant-image-url-card').remove();
+    });
 
-
-        // Delete Product Modal
-        $('#deleteProductModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var productId = button.data('product-id');
-            $('#deleteProductForm').attr('action', "{% url 'product_delete' 0 %}".replace('0', productId));
-        });
-
-        // Toggle action menu
-        $(document).on('click', '.three-dots-menu', function(e) {
-            e.preventDefault();
-            var actionCard = $(this).next('.action-card');
-            $('.action-card').not(actionCard).hide();
-            actionCard.toggle();
-        });
-
-        // Hide action card if clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.action-menu-container').length) {
-                $('.action-card').hide();
-            }
-        });
-
-        // Variant Management Functions
-        let variantCounter = 0;
-        let editVariantCounter = 0;
-        let imageUrlCounter = 0;
-        let editImageUrlCounter = 0;
-
-        // Function to create image URL input card
-        function createImageUrlCard(url = '', index = null) {
-            const urlIndex = index !== null ? index : imageUrlCounter++;
-            return `
-                <div class="image-url-card" data-url-index="${urlIndex}">
-                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
-                    <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
-                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                </div>
-            `;
-        }
-
-        // Function to create edit image URL input card
-        function createEditImageUrlCard(url = '', index = null) {
-            const urlIndex = index !== null ? index : editImageUrlCounter++;
-            return `
-                <div class="image-url-card" data-url-index="${urlIndex}">
-                    <button type="button" class="btn btn-sm btn-danger remove-image-url">Remove</button>
-                    <input type="url" class="form-control image-url-input" placeholder="https://example.com/image.jpg" value="${url}">
-                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                </div>
-            `;
-        }
-
-        // Function to create variant image URL input card
-        function createVariantImageUrlCard(url = '') {
-            return `
-                <div class="image-url-card variant-image-url-card">
-                    <button type="button" class="btn btn-sm btn-danger remove-variant-image-url">Remove</button>
-                    <input type="url" class="form-control variant-image-url-input" placeholder="https://example.com/variant-image.jpg" value="${url}">
-                    <img class="image-url-preview" src="${url || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'}" alt="Preview" style="${url ? '' : 'display:none;'}">
-                </div>
-            `;
-        }
-
-        // Update image preview when URL changes
-        $(document).on('input', '.image-url-input, .variant-image-url-input', function() {
+    // Function to collect image URLs from container - FIXED VERSION
+    function collectImageUrls(containerId) {
+        const urls = [];
+        $(`${containerId} .image-url-input`).each(function() {
             const url = $(this).val().trim();
-            const $preview = $(this).siblings('.image-url-preview');
-            
             if (url) {
-                $preview.attr('src', url).show();
-                $preview.on('error', function() {
-                    $(this).attr('src', 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect width=\'60\' height=\'60\' fill=\'%23ffcccc\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23cc0000\' font-size=\'10\'%3EInvalid%3C/text%3E%3C/svg%3E');
-                });
-            } else {
-                $preview.hide();
+                urls.push(url);
             }
+        });
+        // Join with newline for backend processing
+        return urls.join('\n');
+    }
+
+    // Function to update variants data
+    function updateVariantsData(containerId, hiddenInputId) {
+        const variants = [];
+        $(containerId + ' .variant-card').each(function() {
+            const $card = $(this);
+            const variantId = $card.find('.variant-id').val();
+            const sizeId = $card.find('.variant-size').val();
+            const colorId = $card.find('.variant-color').val();
+            const mrp = $card.find('.variant-mrp').val();
+            const salePrice = $card.find('.variant-sale-price').val();
+            const priceInDolor = $card.find('.variant-price-dolor').val();
+            const salePriceInDollar = $card.find('.variant-sale-price-dollar').val();
+            const url = $card.find('.variant-url').val();
+            const status = $card.find('.variant-status').is(':checked');
             
-            // Update hidden input
-            updateImageUrlsData();
-        });
-
-        // Add common image URL (Add Modal)
-        $('#addImageUrlBtn').on('click', function() {
-            $('#imageUrlsContainer').append(createImageUrlCard());
-        });
-
-        // Add common image URL (Edit Modal)
-        $('#addEditImageUrlBtn').on('click', function() {
-            $('#editImageUrlsContainer').append(createEditImageUrlCard());
-        });
-
-        // Remove common image URL
-        $(document).on('click', '.remove-image-url', function() {
-            $(this).closest('.image-url-card').remove();
-            updateImageUrlsData();
-        });
-
-        // Add variant image URL
-        $(document).on('click', '.add-variant-image-url', function() {
-            const variantIndex = $(this).data('variant-index');
-            const container = $(`.variant-image-urls-container[data-variant-index="${variantIndex}"]`);
-            container.append(createVariantImageUrlCard());
-        });
-
-        // Remove variant image URL
-        $(document).on('click', '.remove-variant-image-url', function() {
-            $(this).closest('.variant-image-url-card').remove();
-            updateVariantsData('#variantsContainer', '#variants_data');
-            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-        });
-
-        // Function to collect image URLs from container
-        function collectImageUrls(containerId) {
-            const urls = [];
-            $(`${containerId} .image-url-input`).each(function() {
-                const url = $(this).val().trim();
-                if (url) {
-                    urls.push(url);
-                }
-            });
-            return urls.join('\\n');
-        }
-
-        // Update image URLs hidden input
-        function updateImageUrlsData() {
-            const urls = collectImageUrls('#imageUrlsContainer');
-            $('#image_urls_data').val(urls);
-            
-            const editUrls = collectImageUrls('#editImageUrlsContainer');
-            $('#new_image_urls_data').val(editUrls);
-        }
-
-        // Sizes and Colors data
-        const sizesData = [
-            {% for size in sizes %}
-            {id: {{ size.id }}, name: "{{ size.name }}"}{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        ];
-        const colorsData = [
-            {% for color in colors %}
-            {id: {{ color.id }}, name: "{{ color.name }}"}{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        ];
-
-        // Function to create variant HTML for Add Modal
-        function createVariantHTML(sizeId = '', colorId = '', mrp = '', salePrice = '', priceInDolor = '', salePriceInDollar = '', url = '', status = true, variantId = null) {
-            const variantIndex = variantId ? variantId : variantCounter++;
-            let sizeOptions = '<option value="">Select Size</option>';
-            let colorOptions = '<option value="">Select Color</option>';
-            
-            sizesData.forEach(size => {
-                sizeOptions += `<option value="${size.id}" ${sizeId == size.id ? 'selected' : ''}>${size.name}</option>`;
-            });
-            
-            colorsData.forEach(color => {
-                colorOptions += `<option value="${color.id}" ${colorId == color.id ? 'selected' : ''}>${color.name}</option>`;
-            });
-            
-            return `
-                <div class="variant-card" data-variant-index="${variantIndex}">
-                    <div class="variant-header">
-                        <h6>Variant ${variantIndex + 1}</h6>
-                        <button type="button" class="btn btn-sm btn-danger remove-variant">Remove</button>
-                    </div>
-                    <input type="hidden" class="variant-id" value="${variantId || ''}">
-                    <div class="row">
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Size</label>
-                            <select class="form-control variant-size" name="variant_size_${variantIndex}">
-                                <option value="">Select Size</option>
-                                ${sizeOptions}
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Color</label>
-                            <select class="form-control variant-color" name="variant_color_${variantIndex}">
-                                <option value="">Select Color</option>
-                                ${colorOptions}
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Status</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input variant-status" type="checkbox" ${status ? 'checked' : ''}>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">MRP (₹)</label>
-                            <input type="number" class="form-control variant-mrp" value="${mrp}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Sale Price (₹)</label>
-                            <input type="number" class="form-control variant-sale-price" value="${salePrice}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Price (USD)</label>
-                            <input type="number" class="form-control variant-price-dolor" value="${priceInDolor}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Sale Price (USD)</label>
-                            <input type="number" class="form-control variant-sale-price-dollar" value="${salePriceInDollar}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <label class="form-label">URL</label>
-                            <input type="url" class="form-control variant-url" value="${url}" placeholder="https://example.com">
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <label class="form-label">Variant Image URLs</label>
-                            <div class="d-flex justify-content-end mb-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
-                            </div>
-                            <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
-                            <small class="text-muted">Add image URLs specific to this variant</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Function to create variant HTML for Edit Modal
-        function createEditVariantHTML(variantData, sizes, colors) {
-            const variantIndex = variantData.id || editVariantCounter++;
-            let sizeOptions = '<option value="">Select Size</option>';
-            let colorOptions = '<option value="">Select Color</option>';
-            
-            sizes.forEach(size => {
-                sizeOptions += `<option value="${size.id}" ${variantData.size_id == size.id ? 'selected' : ''}>${size.name}</option>`;
-            });
-            
-            colors.forEach(color => {
-                colorOptions += `<option value="${color.id}" ${variantData.color_id == color.id ? 'selected' : ''}>${color.name}</option>`;
-            });
-            
-            let existingImagesHTML = '';
-            if (variantData.images && variantData.images.length > 0) {
-                variantData.images.forEach(img => {
-                    existingImagesHTML += `
-                        <div class="current-image">
-                            <img src="${img.url}" alt="Variant Image">
-                            <input type="checkbox" class="delete-checkbox variant-delete-image" 
-                                   data-image-id="${img.id}" value="${img.id}">
-                            <small class="text-muted d-block">Delete</small>
-                        </div>
-                    `;
-                });
-            }
-            
-            return `
-                <div class="variant-card" data-variant-index="${variantIndex}">
-                    <div class="variant-header">
-                        <h6>Variant ${variantIndex}</h6>
-                        <button type="button" class="btn btn-sm btn-danger remove-edit-variant">Remove</button>
-                    </div>
-                    <input type="hidden" class="variant-id" value="${variantData.id || ''}">
-                    <div class="row">
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Size</label>
-                            <select class="form-control variant-size" name="variant_size_${variantIndex}">
-                                ${sizeOptions}
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Color</label>
-                            <select class="form-control variant-color" name="variant_color_${variantIndex}">
-                                ${colorOptions}
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">Status</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input variant-status" type="checkbox" ${variantData.status ? 'checked' : ''}>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">MRP (₹)</label>
-                            <input type="number" class="form-control variant-mrp" value="${variantData.MRP || ''}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Sale Price (₹)</label>
-                            <input type="number" class="form-control variant-sale-price" value="${variantData.sale_price || ''}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Price (USD)</label>
-                            <input type="number" class="form-control variant-price-dolor" value="${variantData.price_in_dolor || ''}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Sale Price (USD)</label>
-                            <input type="number" class="form-control variant-sale-price-dollar" value="${variantData.sale_price_in_dollar || ''}" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <label class="form-label">URL</label>
-                            <input type="url" class="form-control variant-url" value="${variantData.url || ''}" placeholder="https://example.com">
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <label class="form-label">Existing Variant Images</label>
-                            <div class="current-images">${existingImagesHTML || '<p class="text-muted">No images</p>'}</div>
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <label class="form-label">Add New Variant Image URLs</label>
-                            <div class="d-flex justify-content-end mb-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
-                            </div>
-                            <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
-                            <small class="text-muted">Add new image URLs for this variant</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Function to update variants data
-        function updateVariantsData(containerId, hiddenInputId) {
-            const variants = [];
-            $(containerId + ' .variant-card').each(function() {
-                const $card = $(this);
-                const variantId = $card.find('.variant-id').val();
-                const sizeId = $card.find('.variant-size').val();
-                const colorId = $card.find('.variant-color').val();
-                const mrp = $card.find('.variant-mrp').val();
-                const salePrice = $card.find('.variant-sale-price').val();
-                const priceInDolor = $card.find('.variant-price-dolor').val();
-                const salePriceInDollar = $card.find('.variant-sale-price-dollar').val();
-                const url = $card.find('.variant-url').val();
-                const status = $card.find('.variant-status').is(':checked');
-                
-                // Collect variant image URLs
-                const variantIndex = $card.data('variant-index');
-                const imageUrls = [];
-                $(`.variant-image-urls-container[data-variant-index="${variantIndex}"] .variant-image-url-input`).each(function() {
-                    const imgUrl = $(this).val().trim();
-                    if (imgUrl) {
-                        imageUrls.push(imgUrl);
-                    }
-                });
-                
-                const deleteImages = [];
-                $card.find('.variant-delete-image:checked').each(function() {
-                    deleteImages.push($(this).val());
-                });
-                
-                variants.push({
-                    id: variantId || null,
-                    size_id: sizeId || null,
-                    color_id: colorId || null,
-                    MRP: mrp || null,
-                    sale_price: salePrice || null,
-                    price_in_dolor: priceInDolor || null,
-                    sale_price_in_dollar: salePriceInDollar || null,
-                    url: url || null,
-                    image_urls: imageUrls.join('\\n'),
-                    status: status,
-                    delete_images: deleteImages,
-                    images: [0] // Placeholder for image indices
-                });
-            });
-            $(hiddenInputId).val(JSON.stringify(variants));
-        }
-
-        // Add variant button (Add Modal)
-        $('#addVariantBtn').on('click', function() {
-            const html = createVariantHTML();
-            $('#variantsContainer').append(html);
-            updateVariantsData('#variantsContainer', '#variants_data');
-        });
-
-        // Remove variant (Add Modal)
-        $(document).on('click', '.remove-variant', function() {
-            $(this).closest('.variant-card').remove();
-            updateVariantsData('#variantsContainer', '#variants_data');
-        });
-
-        // Add variant button (Edit Modal)
-        $('#addEditVariantBtn').on('click', function() {
-            const html = createEditVariantHTML({}, sizesData, colorsData);
-            $('#editVariantsContainer').append(html);
-            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-        });
-
-        // Remove variant (Edit Modal)
-        $(document).on('click', '.remove-edit-variant', function() {
-            $(this).closest('.variant-card').remove();
-            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-        });
-
-        // Update variants data on change
-        $(document).on('change input', '.variant-size, .variant-color, .variant-mrp, .variant-sale-price, .variant-price-dolor, .variant-sale-price-dollar, .variant-url, .variant-status, .variant-delete-image, .variant-image-url-input', function() {
-            const $card = $(this).closest('.variant-card');
-            const sizeId = $card.find('.variant-size').val() || $card.data('variant-index');
-            const colorId = $card.find('.variant-color').val() || $card.data('variant-index');
+            // Collect variant image URLs
             const variantIndex = $card.data('variant-index');
+            const imageUrls = [];
+            $(`.variant-image-urls-container[data-variant-index="${variantIndex}"] .variant-image-url-input`).each(function() {
+                const imgUrl = $(this).val().trim();
+                if (imgUrl) {
+                    imageUrls.push(imgUrl);
+                }
+            });
             
-            if ($(this).closest('#variantsContainer').length) {
-                updateVariantsData('#variantsContainer', '#variants_data');
-            } else if ($(this).closest('#editVariantsContainer').length) {
-                updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-            }
+            const deleteImages = [];
+            $card.find('.variant-delete-image:checked').each(function() {
+                deleteImages.push($(this).val());
+            });
+            
+            variants.push({
+                id: variantId || null,
+                size_id: sizeId || null,
+                color_id: colorId || null,
+                MRP: mrp || null,
+                sale_price: salePrice || null,
+                price_in_dolor: priceInDolor || null,
+                sale_price_in_dollar: salePriceInDollar || null,
+                url: url || null,
+                image_urls: imageUrls.join('\n'), // Join with newline
+                status: status,
+                delete_images: deleteImages
+            });
         });
+        $(hiddenInputId).val(JSON.stringify(variants));
+    }
 
-        // View Product Modal - Load product details
-        $('#viewProductModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var productId = button.data('product-id');
-            var contentDiv = $('#viewProductContent');
+    // Function to create variant HTML for Add Modal
+    function createVariantHTML(sizeId = '', colorId = '', mrp = '', salePrice = '', priceInDolor = '', salePriceInDollar = '', url = '', status = true, variantId = null) {
+        const variantIndex = variantId ? variantId : variantCounter++;
+        let sizeOptions = '<option value="">Select Size</option>';
+        let colorOptions = '<option value="">Select Color</option>';
+        
+        sizesData.forEach(size => {
+            sizeOptions += `<option value="${size.id}" ${sizeId == size.id ? 'selected' : ''}>${size.name}</option>`;
+        });
+        
+        colorsData.forEach(color => {
+            colorOptions += `<option value="${color.id}" ${colorId == color.id ? 'selected' : ''}>${color.name}</option>`;
+        });
+        
+        return `
+            <div class="variant-card" data-variant-index="${variantIndex}">
+                <div class="variant-header">
+                    <h6>Variant ${variantIndex + 1}</h6>
+                    <button type="button" class="btn btn-sm btn-danger remove-variant">Remove</button>
+                </div>
+                <input type="hidden" class="variant-id" value="${variantId || ''}">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Size</label>
+                        <select class="form-control variant-size">
+                            ${sizeOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Color</label>
+                        <select class="form-control variant-color">
+                            ${colorOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Status</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input variant-status" type="checkbox" ${status ? 'checked' : ''}>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">MRP (₹)</label>
+                        <input type="number" class="form-control variant-mrp" value="${mrp}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Sale Price (₹)</label>
+                        <input type="number" class="form-control variant-sale-price" value="${salePrice}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Price (USD)</label>
+                        <input type="number" class="form-control variant-price-dolor" value="${priceInDolor}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Sale Price (USD)</label>
+                        <input type="number" class="form-control variant-sale-price-dollar" value="${salePriceInDollar}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label">URL</label>
+                        <input type="url" class="form-control variant-url" value="${url}" placeholder="https://example.com">
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label">Variant Image URLs</label>
+                        <div class="d-flex justify-content-end mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                        </div>
+                        <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
+                        <small class="text-muted">Add image URLs specific to this variant</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Function to create variant HTML for Edit Modal
+    function createEditVariantHTML(variantData, sizes, colors) {
+        const variantIndex = variantData.id || editVariantCounter++;
+        let sizeOptions = '<option value="">Select Size</option>';
+        let colorOptions = '<option value="">Select Color</option>';
+        
+        sizes.forEach(size => {
+            sizeOptions += `<option value="${size.id}" ${variantData.size_id == size.id ? 'selected' : ''}>${size.name}</option>`;
+        });
+        
+        colors.forEach(color => {
+            colorOptions += `<option value="${color.id}" ${variantData.color_id == color.id ? 'selected' : ''}>${color.name}</option>`;
+        });
+        
+        let existingImagesHTML = '';
+        if (variantData.images && variantData.images.length > 0) {
+            variantData.images.forEach(img => {
+                existingImagesHTML += `
+                    <div class="current-image" style="position: relative;">
+                        <img src="${img.url}" alt="Variant Image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'%3E%3Crect width=\\'100\\' height=\\'100\\' fill=\\'%23ddd\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'%3EError%3C/text%3E%3C/svg%3E';">
+                        <div style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.9); padding: 2px 5px; border-radius: 3px;">
+                            <input type="checkbox" class="form-check-input variant-delete-image" data-image-id="${img.id}" value="${img.id}">
+                            <label class="form-check-label ms-1" style="font-size: 11px;">Delete</label>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        return `
+            <div class="variant-card" data-variant-index="${variantIndex}">
+                <div class="variant-header">
+                    <h6>Variant ${variantIndex}</h6>
+                    <button type="button" class="btn btn-sm btn-danger remove-edit-variant">Remove</button>
+                </div>
+                <input type="hidden" class="variant-id" value="${variantData.id || ''}">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Size</label>
+                        <select class="form-control variant-size">
+                            ${sizeOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Color</label>
+                        <select class="form-control variant-color">
+                            ${colorOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Status</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input variant-status" type="checkbox" ${variantData.status ? 'checked' : ''}>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">MRP (₹)</label>
+                        <input type="number" class="form-control variant-mrp" value="${variantData.MRP || ''}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Sale Price (₹)</label>
+                        <input type="number" class="form-control variant-sale-price" value="${variantData.sale_price || ''}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Price (USD)</label>
+                        <input type="number" class="form-control variant-price-dolor" value="${variantData.price_in_dolor || ''}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label">Sale Price (USD)</label>
+                        <input type="number" class="form-control variant-sale-price-dollar" value="${variantData.sale_price_in_dollar || ''}" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label">URL</label>
+                        <input type="url" class="form-control variant-url" value="${variantData.url || ''}" placeholder="https://example.com">
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label">Existing Variant Images</label>
+                        <div class="current-images d-flex flex-wrap gap-2">${existingImagesHTML || '<p class="text-muted">No images</p>'}</div>
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label">Add New Variant Image URLs</label>
+                        <div class="d-flex justify-content-end mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary add-variant-image-url" data-variant-index="${variantIndex}">+ Add Image URL</button>
+                        </div>
+                        <div class="variant-image-urls-container" data-variant-index="${variantIndex}"></div>
+                        <small class="text-muted">Add new image URLs for this variant</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Add variant button (Add Modal)
+    $('#addVariantBtn').on('click', function() {
+        const html = createVariantHTML();
+        $('#variantsContainer').append(html);
+    });
+
+    // Remove variant (Add Modal)
+    $(document).on('click', '.remove-variant', function() {
+        $(this).closest('.variant-card').remove();
+    });
+
+    // Add variant button (Edit Modal)
+    $('#addEditVariantBtn').on('click', function() {
+        const html = createEditVariantHTML({}, sizesData, colorsData);
+        $('#editVariantsContainer').append(html);
+    });
+
+    // Remove variant (Edit Modal)
+    $(document).on('click', '.remove-edit-variant', function() {
+        $(this).closest('.variant-card').remove();
+    });
+
+    // Add Product Form Validation and Submission - FIXED
+    $('#addProductForm').on('submit', function(event) {
+        event.preventDefault();
+        if (validateForm($(this))) {
+            // Collect and update common image URLs
+            const imageUrls = collectImageUrls('#imageUrlsContainer');
+            $('#image_urls_data').val(imageUrls);
             
-            // Show loading spinner
-            contentDiv.html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+            // Update variants data
+            updateVariantsData('#variantsContainer', '#variants_data');
             
-            // Fetch product data via AJAX
-            $.ajax({
-                url: "{% url 'product_edit' 0 %}".replace("0", productId),
-                type: 'GET',
-                success: function(response) {
-                    var html = `
-                        <div class="row">
-                            <div class="col-md-12 mb-4">
-                                <h4>${response.name || 'N/A'}</h4>
-                            </div>
-                            
-                            <!-- Product Images -->
-                            <div class="col-md-12 mb-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-images me-2"></i>Product Images</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="d-flex flex-wrap gap-3">
-                    `;
-                    
-                    if (response.images && response.images.length > 0) {
-                        response.images.forEach(function(image) {
-                            html += `
-                                <div class="border rounded p-2" style="width: 150px; height: 150px; overflow: hidden; background: #fff;">
-                                    <img src="${image.url}" alt="Product Image" class="img-fluid" style="width: 100%; height: 100%; object-fit: cover;">
+            // Debug log
+            console.log('Common Image URLs:', imageUrls);
+            console.log('Variants Data:', $('#variants_data').val());
+            
+            // Submit the form
+            this.submit();
+        }
+    });
+
+    // Edit Product Form Validation and Submission - FIXED
+    $('#editProductForm').on('submit', function(event) {
+        event.preventDefault();
+        if (validateForm($(this))) {
+            // Collect and update new common image URLs
+            const newImageUrls = collectImageUrls('#editImageUrlsContainer');
+            $('#new_image_urls_data').val(newImageUrls);
+            
+            // Update variants data
+            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+            
+            // Debug log
+            console.log('New Common Image URLs:', newImageUrls);
+            console.log('Variants Data:', $('#edit_variants_data').val());
+            
+            // Submit the form
+            this.submit();
+        }
+    });
+
+    // View Product Modal - Load product details
+    $('#viewProductModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var productId = button.data('product-id');
+        var contentDiv = $('#viewProductContent');
+        
+        // Show loading spinner
+        contentDiv.html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        
+        // Fetch product data via AJAX
+        $.ajax({
+            url: "{% url 'product_edit' 0 %}".replace("0", productId),
+            type: 'GET',
+            success: function(response) {
+                var html = `
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <h4>${response.name || 'N/A'}</h4>
+                        </div>
+                        
+                        <!-- Product Images -->
+                        <div class="col-md-12 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-images me-2"></i>Product Images</h6>
                                 </div>
-                            `;
-                        });
-                    } else {
-                        html += '<p class="text-muted mb-0"><i class="fa fa-image me-2"></i>No images available</p>';
-                    }
-                    
-                    html += `
-                                        </div>
-                                    </div>
-                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap gap-3">
+                `;
+                
+                if (response.images && response.images.length > 0) {
+                    response.images.forEach(function(image) {
+                        html += `
+                            <div class="border rounded p-2" style="width: 150px; height: 150px; overflow: hidden; background: #fff;">
+                                <img src="${image.url}" alt="Product Image" class="img-fluid" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'150\\' height=\\'150\\'%3E%3Crect width=\\'150\\' height=\\'150\\' fill=\\'%23ddd\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'%3ENo Image%3C/text%3E%3C/svg%3E';">
                             </div>
-                            
-                            <!-- Basic Information -->
-                            <div class="col-md-6 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-info-circle me-2"></i>Basic Information</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tr>
-                                                <td class="fw-bold" style="width: 40%;">Product ID:</td>
-                                                <td>${response.id || 'N/A'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Category:</td>
-                                                <td>${response.category_name || (response.category_id ? 'Category ID: ' + response.category_id : 'N/A')}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Status:</td>
-                                                <td>
-                                                    <span class="badge badge-${response.status ? 'success' : 'danger'}">
-                                                        ${response.status ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Created At:</td>
-                                                <td>${response.created_at || 'N/A'}</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Pricing Information -->
-                            <div class="col-md-6 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa-dollar-sign"></i>Pricing Information</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <table class="table table-sm table-borderless mb-0">
-                                            <tr>
-                                                <td class="fw-bold" style="width: 40%;">MRP (₹):</td>
-                                                <td>₹${response.MRP || '-'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Sale Price (₹):</td>
-                                                <td>₹${response.sale_price || '-'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Price (USD):</td>
-                                                <td>$${response.price_in_dolor || '-'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="fw-bold">Sale Price (USD):</td>
-                                                <td>$${response.sale_price_in_dollar || '-'}</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Description -->
-                            <div class="col-md-12 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-align-left me-2"></i>Description</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="mb-0">${response.description || 'No description available'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- URLs -->
-                            <div class="col-md-6 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-link me-2"></i>Product URL</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        ${response.url ? `<a href="${response.url}" target="_blank" class="text-break">${response.url}</a>` : '<p class="text-muted mb-0">No URL provided</p>'}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-youtube me-2"></i>YouTube URL</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        ${response.youtube_url ? `<a href="${response.youtube_url}" target="_blank" class="text-break">${response.youtube_url}</a>` : '<p class="text-muted mb-0">No YouTube URL provided</p>'}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Variants -->
-                            <div class="col-md-12 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fa fa-layer-group me-2"></i>Product Variants (${response.variants ? response.variants.length : 0})</h6>
-                                    </div>
-                                    <div class="card-body">
-                    `;
-                    
-                    if (response.variants && response.variants.length > 0) {
-                        html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>MRP (₹)</th><th>Sale Price (₹)</th><th>Price (USD)</th><th>Sale Price (USD)</th><th>URL</th><th>Status</th><th>Images</th></tr></thead><tbody>';
-                        response.variants.forEach(function(variant) {
-                            const urlDisplay = variant.url ? `<a href="${variant.url}" target="_blank" rel="noopener noreferrer">${variant.url.substring(0, 30)}${variant.url.length > 30 ? '...' : ''}</a>` : '-';
-                            html += `
-                                <tr>
-                                    <td>${variant.size_name || 'N/A'}</td>
-                                    <td>${variant.color_name || 'N/A'}</td>
-                                    <td>₹${variant.MRP || '-'}</td>
-                                    <td>₹${variant.sale_price || '-'}</td>
-                                    <td>$${variant.price_in_dolor || '-'}</td>
-                                    <td>$${variant.sale_price_in_dollar || '-'}</td>
-                                    <td>${urlDisplay}</td>
-                                    <td><span class="badge badge-${variant.status ? 'success' : 'danger'}">${variant.status ? 'Active' : 'Inactive'}</span></td>
-                                    <td>${variant.images ? variant.images.length : 0} image(s)</td>
-                                </tr>
-                            `;
-                        });
-                        html += '</tbody></table></div>';
-                    } else {
-                        html += '<p class="text-muted mb-0">No variants available</p>';
-                    }
-                    
-                    html += `
+                        `;
+                    });
+                } else {
+                    html += '<p class="text-muted mb-0"><i class="fa fa-image me-2"></i>No images available</p>';
+                }
+                
+                html += `
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    `;
-                    
-                    contentDiv.html(html);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error fetching product data:', error);
-                    contentDiv.html('<div class="alert alert-danger">Error loading product data. Please try again.</div>');
-                }
-            });
-        });
-
-        // Update Edit Modal to load variants
-        $('#editProductModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var productId = button.data('product-id');
-            
-            // Fetch product data via AJAX
-            $.ajax({
-                url: "{% url 'product_edit' 0 %}".replace("0", productId),
-                type: 'GET',
-                success: function(response) {
-                    var form = $('#editProductForm');
-                    form.attr('action', "{% url 'product_edit' 0 %}".replace("0", productId));
-                    form.find('#productId').val(productId);
-                    form.find('#edit_name').val(response.name || "");
-                    form.find('#edit_category').val(response.category_id || "");
-                    form.find('#edit_description').val(response.description || "");
-                    form.find('#edit_MRP').val(response.MRP || "");
-                    form.find('#edit_sale_price').val(response.sale_price || "");
-                    form.find('#edit_price_in_dolor').val(response.price_in_dolor || "");
-                    form.find('#edit_sale_price_in_dollar').val(response.sale_price_in_dollar || "");
-                    form.find('#edit_url').val(response.url || "");
-                    form.find('#edit_youtube_url').val(response.youtube_url || "");
-                    form.find('#edit_status').prop('checked', response.status);
-                    
-                    // Display current common images
-                    var currentImagesContainer = $('#currentImages');
-                    currentImagesContainer.empty();
-                    
-                    if (response.images && response.images.length > 0) {
-                        response.images.forEach(function(image) {
-                            var imageHtml = `
-                                <div class="image-url-card">
-                                    <img class="image-url-preview" src="${image.url}" alt="Product Image">
-                                    <input type="url" class="form-control" value="${image.url}" readonly>
-                                    <input type="checkbox" class="delete-checkbox" name="delete_images" value="${image.id}">
-                                    <label class="ms-2">Delete</label>
+                        
+                        <!-- Basic Information -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-info-circle me-2"></i>Basic Information</h6>
                                 </div>
-                            `;
-                            currentImagesContainer.append(imageHtml);
-                        });
-                    } else {
-                        currentImagesContainer.html('<p class="text-muted">No images</p>');
-                    }
-                    
-                    // Clear and reset edit image URLs container
-                    $('#editImageUrlsContainer').empty();
-                    editImageUrlCounter = 0;
-                    
-                    // Load variants
-                    $('#editVariantsContainer').empty();
-                    if (response.variants && response.variants.length > 0) {
-                        response.variants.forEach(function(variant) {
-                            const html = createEditVariantHTML(variant, sizesData, colorsData);
-                            $('#editVariantsContainer').append(html);
-                        });
-                    }
-                    updateVariantsData('#editVariantsContainer', '#edit_variants_data');
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error fetching product data:', error);
-                    alert('Error loading product data');
+                                <div class="card-body">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 40%;">Product ID:</td>
+                                            <td>${response.id || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Category:</td>
+                                            <td>${response.category_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Status:</td>
+                                            <td>
+                                                <span class="badge badge-${response.status ? 'success' : 'danger'}">
+                                                    ${response.status ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pricing Information -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-dollar-sign me-2"></i>Pricing Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 40%;">MRP (₹):</td>
+                                            <td>₹${response.MRP || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Sale Price (₹):</td>
+                                            <td>₹${response.sale_price || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Price (USD):</td>
+                                            <td>$${response.price_in_dolor || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Sale Price (USD):</td>
+                                            <td>$${response.sale_price_in_dollar || '-'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="col-md-12 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-align-left me-2"></i>Description</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">${response.description || 'No description available'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- URLs -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-link me-2"></i>Product URL</h6>
+                                </div>
+                                <div class="card-body">
+                                    ${response.url ? `<a href="${response.url}" target="_blank" class="text-break">${response.url}</a>` : '<p class="text-muted mb-0">No URL provided</p>'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-youtube me-2"></i>YouTube URL</h6>
+                                </div>
+                                <div class="card-body">
+                                    ${response.youtube_url ? `<a href="${response.youtube_url}" target="_blank" class="text-break">${response.youtube_url}</a>` : '<p class="text-muted mb-0">No YouTube URL provided</p>'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Variants -->
+                        <div class="col-md-12 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fa fa-layer-group me-2"></i>Product Variants (${response.variants ? response.variants.length : 0})</h6>
+                                </div>
+                                <div class="card-body">
+                `;
+                
+                if (response.variants && response.variants.length > 0) {
+                    html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Size</th><th>Color</th><th>MRP (₹)</th><th>Sale Price (₹)</th><th>Price (USD)</th><th>Sale Price (USD)</th><th>URL</th><th>Status</th><th>Images</th></tr></thead><tbody>';
+                    response.variants.forEach(function(variant) {
+                        const urlDisplay = variant.url ? `<a href="${variant.url}" target="_blank" rel="noopener noreferrer">${variant.url.substring(0, 30)}${variant.url.length > 30 ? '...' : ''}</a>` : '-';
+                        html += `
+                            <tr>
+                                <td>${variant.size_name || 'N/A'}</td>
+                                <td>${variant.color_name || 'N/A'}</td>
+                                <td>₹${variant.MRP || '-'}</td>
+                                <td>₹${variant.sale_price || '-'}</td>
+                                <td>${variant.price_in_dolor || '-'}</td>
+                                <td>${variant.sale_price_in_dollar || '-'}</td>
+                                <td>${urlDisplay}</td>
+                                <td><span class="badge badge-${variant.status ? 'success' : 'danger'}">${variant.status ? 'Active' : 'Inactive'}</span></td>
+                                <td>${variant.images ? variant.images.length : 0} image(s)</td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<p class="text-muted mb-0">No variants available</p>';
                 }
-            });
-        });
-
-        // Update variants data before form submission
-        $('#addProductForm').on('submit', function() {
-            updateVariantsData('#variantsContainer', '#variants_data');
-        });
-
-        $('#editProductForm').on('submit', function() {
-            updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+                
+                html += `
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                contentDiv.html(html);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching product data:', error);
+                contentDiv.html('<div class="alert alert-danger">Error loading product data. Please try again.</div>');
+            }
         });
     });
+
+    // Update Edit Modal to load variants
+    $('#editProductModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var productId = button.data('product-id');
+        
+        // Fetch product data via AJAX
+        $.ajax({
+            url: "{% url 'product_edit' 0 %}".replace("0", productId),
+            type: 'GET',
+            success: function(response) {
+                var form = $('#editProductForm');
+                form.attr('action', "{% url 'product_edit' 0 %}".replace("0", productId));
+                form.find('#productId').val(productId);
+                form.find('#edit_name').val(response.name || "");
+                form.find('#edit_category').val(response.category_id || "");
+                form.find('#edit_description').val(response.description || "");
+                form.find('#edit_MRP').val(response.MRP || "");
+                form.find('#edit_sale_price').val(response.sale_price || "");
+                form.find('#edit_price_in_dolor').val(response.price_in_dolor || "");
+                form.find('#edit_sale_price_in_dollar').val(response.sale_price_in_dollar || "");
+                form.find('#edit_url').val(response.url || "");
+                form.find('#edit_youtube_url').val(response.youtube_url || "");
+                form.find('#edit_status').prop('checked', response.status);
+                
+                // Display current common images - FIXED
+                var currentImagesContainer = $('#currentImages');
+                currentImagesContainer.empty();
+                
+                if (response.images && response.images.length > 0) {
+                    response.images.forEach(function(image) {
+                        var imageHtml = `
+                            <div class="current-image" style="position: relative; display: inline-block; margin: 5px;">
+                                <img src="${image.url}" alt="Product Image" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'%3E%3Crect width=\\'100\\' height=\\'100\\' fill=\\'%23ddd\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'%3EError%3C/text%3E%3C/svg%3E';">
+                                <div style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.9); padding: 2px 5px; border-radius: 3px;">
+                                    <input type="checkbox" class="form-check-input" name="delete_images" value="${image.id}">
+                                    <label class="form-check-label ms-1" style="font-size: 11px;">Delete</label>
+                                </div>
+                            </div>
+                        `;
+                        currentImagesContainer.append(imageHtml);
+                    });
+                } else {
+                    currentImagesContainer.html('<p class="text-muted">No images</p>');
+                }
+                
+                // Clear and reset edit image URLs container
+                $('#editImageUrlsContainer').empty();
+                editImageUrlCounter = 0;
+                
+                // Load variants - FIXED
+                $('#editVariantsContainer').empty();
+                editVariantCounter = 0;
+                if (response.variants && response.variants.length > 0) {
+                    response.variants.forEach(function(variant) {
+                        const html = createEditVariantHTML(variant, sizesData, colorsData);
+                        $('#editVariantsContainer').append(html);
+                    });
+                }
+                updateVariantsData('#editVariantsContainer', '#edit_variants_data');
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching product data:', error);
+                alert('Error loading product data');
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

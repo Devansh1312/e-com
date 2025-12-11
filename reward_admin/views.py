@@ -2207,14 +2207,15 @@ class ProductDeleteView(View):
     def post(self, request, pk):
         product_obj = get_object_or_404(product, pk=pk)
         try:
-            # Delete all associated images
-            images = product_obj.images.all()
-            for img in images:
-                if img.image:
-                    if default_storage.exists(img.image.name):
-                        default_storage.delete(img.image.name)
-                img.delete()
+            # Delete all associated image records (URLs, no files to delete)
+            product_obj.images.all().delete()
             
+            # Delete all variants and their images
+            for variant in product_obj.variants.all():
+                variant.images.all().delete()
+                variant.delete()
+            
+            # Delete the product
             product_obj.delete()
             messages.success(request, "Product deleted successfully")
         except Exception as e:
